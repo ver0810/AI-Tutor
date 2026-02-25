@@ -1,7 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import Layout from './components/Layout';
 import { useEffect, useState, Suspense, lazy } from 'react';
-import { historyApi } from './api/history';
+import { historyApi } from './api';
 import type { UploadKnowledgeBaseResponse } from './api/knowledgebase';
 
 // Lazy load components
