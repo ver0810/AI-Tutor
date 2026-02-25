@@ -1,0 +1,17 @@
+# ==============================================================================
+# 后端开发环境 Dockerfile
+# ==============================================================================
+
+FROM gradle:8.14-jdk21
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+COPY . .
+
+RUN mkdir -p /root/.gradle && chmod -R 777 /root/.gradle
+
+EXPOSE 8080 5005
+
+CMD ["sh", "-c", "gradle bootRun --no-daemon -Dspring-boot.run.jvmArguments='-Xdebug -Xrunjdwp:server=y,transport=dt_socket,suspend=n'"]

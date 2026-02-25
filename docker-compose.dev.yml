@@ -1,0 +1,179 @@
+# ==============================================================================
+# 开发环境 Docker Compose 配置
+# 
+# 使用方式:
+#   docker-compose -f docker-compose.dev.yml up -d
+#   docker-compose -f docker-compose.dev.yml logs -f    # 查看日志
+#   docker-compose -f docker-compose.dev.yml down       # 停止服务
+#
+# 特点:
+#   - 后端/前端代码通过 volume 挂载，修改代码自动生效
+#   - 后端支持热重载 (Spring Boot DevTools)
+#   - 前端支持 HMR (Vite Hot Module Replacement)
+#   - 包含完整的数据库、Redis、MinIO 基础设施
+# ==============================================================================
+
+services:
+  # =========================================
+  # 1. PostgreSQL 数据库服务 (不变)
+  # =========================================
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: interview-dev-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: interview_guide
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "15432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # =========================================
+  # 2. Redis 服务
+  # =========================================
+  redis:
+    image: redis:7
+    container_name: interview-dev-redis
+    ports:
+      - "16379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # =========================================
+  # 3. MinIO 对象存储服务 (不变)
+  # =========================================
+  minio:
+    image: minio/minio
+    container_name: interview-dev-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # =========================================
+  # 4. MinIO 初始化任务
+  # =========================================
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin;
+      /usr/bin/mc mb myminio/interview-guide;
+      /usr/bin/mc anonymous set public myminio/interview-guide;
+      exit 0;
+      "
+
+  # =========================================
+  # 5. 后端开发服务 (热重载模式)
+  # =========================================
+  app:
+    build:
+      context: .
+      dockerfile: app/Dockerfile.dev
+    container_name: interview-dev-app
+    network_mode: "host"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      createbuckets:
+        condition: service_completed_successfully
+    environment:
+      # 数据库 - 使用 localhost 因为是 host 网络模式
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 15432
+      POSTGRES_DB: interview_guide
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      
+      # Redis
+      REDIS_HOST: localhost
+      REDIS_PORT: 16379
+      
+      # 对象存储
+      APP_STORAGE_ENDPOINT: http://localhost:9000
+      APP_STORAGE_ACCESS_KEY: minioadmin
+      APP_STORAGE_SECRET_KEY: minioadmin
+      APP_STORAGE_BUCKET: interview-guide
+      APP_STORAGE_REGION: us-east-1
+      
+      # AI 模型配置
+      AI_BAILIAN_API_KEY: ${AI_BAILIAN_API_KEY}
+      AI_MODEL: ${AI_MODEL:-qwen-plus}
+      
+      # 面试参数
+      APP_INTERVIEW_FOLLOW_UP_COUNT: ${APP_INTERVIEW_FOLLOW_UP_COUNT:-1}
+      APP_INTERVIEW_EVALUATION_BATCH_SIZE: ${APP_INTERVIEW_EVALUATION_BATCH_SIZE:-8}
+      
+      # 开发模式配置
+      SPRING_PROFILES_ACTIVE: dev
+    volumes:
+      # 挂载源代码，实现热重载
+      - ./app/src:/app/app/src
+      # 挂载配置目录
+      - ./app/src/main/resources:/app/app/src/main/resources:ro
+    ports:
+      - "8080:8080"
+      - "5005:5005"  # 远程调试端口
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  # =========================================
+  # 6. 前端开发服务 (HMR 模式)
+  # =========================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: interview-dev-frontend
+    depends_on:
+      - app
+    environment:
+      # Vite 配置
+      VITE_API_BASE_URL: http://localhost:8080
+    volumes:
+      # 挂载源代码，实现 HMR
+      - ./frontend/src:/app/src
+    ports:
+      - "3000:3000"
+      - "5173:5173"
+
+# =========================================
+# 卷定义
+# =========================================
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:

@@ -1,0 +1,47 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.swp
+*.swo
+.app/
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+/coverage/
+*.exec
+
+# Docs
+/docs/
+qodana.yaml
+
+# Build
+app/bin/
+frontend/dist/
+frontend/node_modules/
+
+# Docker (keep Dockerfile but ignore build context)
+*.tar
+*.log
