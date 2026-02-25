@@ -1,6 +1,6 @@
 <div align="center">
 
-**智能 AI 面试官平台** - 基于大语言模型的简历分析和模拟面试系统
+**AItutor** - 高校专属智能助教与学情评估系统
 
 [![Java](https://img.shields.io/badge/Java-21-orange?logo=openjdk)](https://openjdk.org/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0-green?logo=springboot)](https://spring.io/projects/spring-boot)
@@ -16,7 +16,7 @@
 
 ## 项目介绍
 
-InterviewGuide 是一个集成了简历分析、模拟面试和知识库管理的智能面试辅助平台。系统利用大语言模型（LLM）和向量数据库技术，为求职者和 HR 提供智能化的简历评估和面试练习服务。
+AItutor 是一个基于大语言模型的高校专属智能助教与学情评估系统。系统利用 RAG（检索增强生成）技术，为高校学生提供课程资料分析、课后测验评估和知识库答疑服务。
 
 ## 系统架构
 

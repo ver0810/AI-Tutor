@@ -1,6 +1,6 @@
 /*
- * AI Interview Platform - Backend Application
- * Spring Boot 4.0 + Java 21 + Spring AI 2.0 + PostgreSQL + pgvector + RustFS + Redis
+ * AItutor - Backend Application
+ * Spring Boot 4.0 + Java 21 + Spring AI 2.0 + PostgreSQL + pgvector + MinIO + Redis
  */
 
 plugins {
