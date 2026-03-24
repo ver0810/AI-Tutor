@@ -1,15 +1,15 @@
 // 面试相关类型定义
 
-export interface InterviewSession {
+export interface TutoringSession {
   sessionId: string;
-  resumeText: string;
+  studentProfileText: string;
   totalQuestions: number;
   currentQuestionIndex: number;
-  questions: InterviewQuestion[];
+  questions: TutoringQuestion[];
   status: 'CREATED' | 'IN_PROGRESS' | 'COMPLETED' | 'EVALUATED';
 }
 
-export interface InterviewQuestion {
+export interface TutoringQuestion {
   questionIndex: number;
   question: string;
   type: QuestionType;
@@ -20,19 +20,16 @@ export interface InterviewQuestion {
 }
 
 export type QuestionType = 
-  | 'PROJECT' 
-  | 'JAVA_BASIC' 
-  | 'JAVA_COLLECTION' 
-  | 'JAVA_CONCURRENT' 
-  | 'MYSQL' 
-  | 'REDIS' 
-  | 'SPRING' 
-  | 'SPRING_BOOT';
+  | 'BASIC_CONCEPT' 
+  | 'THEORY_DERIVATION' 
+  | 'PRACTICAL_APPLICATION' 
+  | 'LOGICAL_REASONING' 
+  | 'KNOWLEDGE_EXTENSION';
 
-export interface CreateInterviewRequest {
-  resumeText: string;
+export interface CreateTutoringRequest {
+  studentProfileText: string;
   questionCount: number;
-  resumeId?: number;
+  studentProfileId?: number;
   forceCreate?: boolean;  // 是否强制创建新会话（忽略未完成的会话）
 }
 
@@ -44,18 +41,18 @@ export interface SubmitAnswerRequest {
 
 export interface SubmitAnswerResponse {
   hasNextQuestion: boolean;
-  nextQuestion: InterviewQuestion | null;
+  nextQuestion: TutoringQuestion | null;
   currentIndex: number;
   totalQuestions: number;
 }
 
 export interface CurrentQuestionResponse {
   completed: boolean;
-  question?: InterviewQuestion;
+  question?: TutoringQuestion;
   message?: string;
 }
 
-export interface InterviewReport {
+export interface TutoringReport {
   sessionId: string;
   totalQuestions: number;
   overallScore: number;
