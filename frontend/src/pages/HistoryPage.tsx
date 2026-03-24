@@ -1,30 +1,30 @@
 import {useEffect, useState} from 'react';
 import {AnimatePresence, motion} from 'framer-motion';
-import {historyApi, ResumeListItem} from '../api/history';
+import {historyApi, StudentProfileListItem} from '../api/history';
 import DeleteConfirmDialog from '../components/DeleteConfirmDialog';
 import {formatDateOnly} from '../utils/date';
 import {getScoreProgressColor} from '../utils/score';
 
 interface HistoryListProps {
-  onSelectResume: (id: number) => void;
+  onSelectStudentProfile: (id: number) => void;
 }
 
-export default function HistoryList({ onSelectResume }: HistoryListProps) {
-  const [resumes, setResumes] = useState<ResumeListItem[]>([]);
+export default function HistoryList({ onSelectStudentProfile }: HistoryListProps) {
+  const [studentProfiles, setStudentProfiles] = useState<StudentProfileListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: number; filename: string } | null>(null);
 
   useEffect(() => {
-    loadResumes();
+    loadStudentProfiles();
   }, []);
 
-  const loadResumes = async () => {
+  const loadStudentProfiles = async () => {
     setLoading(true);
     try {
-      const data = await historyApi.getResumes();
-      setResumes(data);
+      const data = await historyApi.getStudentProfiles();
+      setStudentProfiles(data);
     } catch (err) {
       console.error('加载历史记录失败', err);
     } finally {
@@ -45,9 +45,9 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
     const { id } = deleteConfirm;
     setDeletingId(id);
     try {
-      await historyApi.deleteResume(id);
+      await historyApi.deleteStudentProfile(id);
       // 重新加载列表
-      await loadResumes();
+      await loadStudentProfiles();
       setDeleteConfirm(null);
     } catch (err) {
       alert(err instanceof Error ? err.message : '删除失败，请稍后重试');
@@ -56,8 +56,8 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
     }
   };
 
-  const filteredResumes = resumes.filter(resume =>
-    resume.filename.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredStudentProfiles = studentProfiles.filter(studentProfile =>
+    studentProfile.filename.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -118,7 +118,7 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
       )}
 
       {/* 空状态 */}
-      {!loading && filteredResumes.length === 0 && (
+      {!loading && filteredStudentProfiles.length === 0 && (
         <motion.div 
           className="text-center py-20 bg-white rounded-2xl"
           initial={{ opacity: 0, scale: 0.95 }}
@@ -131,7 +131,7 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
       )}
 
       {/* 表格 */}
-      {!loading && filteredResumes.length > 0 && (
+      {!loading && filteredStudentProfiles.length > 0 && (
         <motion.div 
           className="bg-white rounded-2xl shadow-sm overflow-hidden"
           initial={{ opacity: 0, y: 20 }}
@@ -150,13 +150,13 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
             </thead>
             <tbody>
               <AnimatePresence>
-                {filteredResumes.map((resume, index) => (
+                {filteredStudentProfiles.map((studentProfile, index) => (
                   <motion.tr
-                    key={resume.id}
+                    key={studentProfile.id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    onClick={() => onSelectResume(resume.id)}
+                    onClick={() => onSelectStudentProfile(studentProfile.id)}
                     className="border-b border-slate-100 last:border-0 hover:bg-slate-50 cursor-pointer transition-colors group"
                   >
                     <td className="px-6 py-5">
@@ -167,29 +167,29 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
                             <polyline points="14,2 14,8 20,8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                           </svg>
                         </div>
-                        <span className="font-medium text-slate-800">{resume.filename}</span>
+                        <span className="font-medium text-slate-800">{studentProfile.filename}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-5 text-slate-500">{formatDateOnly(resume.uploadedAt)}</td>
+                    <td className="px-6 py-5 text-slate-500">{formatDateOnly(studentProfile.uploadedAt)}</td>
                     <td className="px-6 py-5">
-                      {resume.latestScore !== undefined ? (
+                      {studentProfile.latestScore !== undefined ? (
                         <div className="flex items-center gap-3">
                           <div className="w-20 h-2 bg-slate-100 rounded-full overflow-hidden">
                             <motion.div 
-                              className={`h-full ${getScoreProgressColor(resume.latestScore)} rounded-full`}
+                              className={`h-full ${getScoreProgressColor(studentProfile.latestScore)} rounded-full`}
                               initial={{ width: 0 }}
-                              animate={{ width: `${resume.latestScore}%` }}
+                              animate={{ width: `${studentProfile.latestScore}%` }}
                               transition={{ duration: 0.8, delay: index * 0.05 }}
                             />
                           </div>
-                          <span className="font-bold text-slate-800">{resume.latestScore}</span>
+                          <span className="font-bold text-slate-800">{studentProfile.latestScore}</span>
                         </div>
                       ) : (
                         <span className="text-slate-400">-</span>
                       )}
                     </td>
                     <td className="px-6 py-5">
-                      {resume.interviewCount > 0 ? (
+                      {studentProfile.tutoringCount > 0 ? (
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-sm font-medium">
                           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
                             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
@@ -204,12 +204,12 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
                     <td className="px-4">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={(e) => handleDeleteClick(resume.id, resume.filename, e)}
-                          disabled={deletingId === resume.id}
+                          onClick={(e) => handleDeleteClick(studentProfile.id, studentProfile.filename, e)}
+                          disabled={deletingId === studentProfile.id}
                           className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title="删除简历"
                         >
-                          {deletingId === resume.id ? (
+                          {deletingId === studentProfile.id ? (
                             <motion.div
                               className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full"
                               animate={{ rotate: 360 }}
