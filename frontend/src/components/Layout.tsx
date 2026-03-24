@@ -32,19 +32,19 @@ export default function Layout() {
   const navGroups: NavGroup[] = [
     {
       id: 'course',
-      title: '课程学习',
+      title: '学情中心',
       items: [
-        { id: 'upload', path: '/upload', label: '上传资料', icon: Upload, description: 'AI 分析课程资料' },
-        { id: 'resumes', path: '/history', label: '课程资料库', icon: FileStack, description: '管理所有课程资料' },
-        { id: 'interviews', path: '/interviews', label: '测验记录', icon: Users, description: '查看测验历史' },
+        { id: 'upload', path: '/upload', label: '上传资料', icon: Upload, description: 'AI 分析学习资料' },
+        { id: 'studentProfiles', path: '/history', label: '学习档案库', icon: FileStack, description: '管理已分析的学习资料' },
+        { id: 'tutorings', path: '/tutorings', label: '测评记录', icon: Users, description: '查看历史测评结果' },
       ],
     },
     {
       id: 'knowledge',
       title: '知识库',
       items: [
-        { id: 'kb-manage', path: '/knowledgebase', label: '知识库管理', icon: Database, description: '管理知识文档' },
-        { id: 'chat', path: '/knowledgebase/chat', label: '问答助手', icon: MessageSquare, description: '基于知识库问答' },
+        { id: 'kb-manage', path: '/courseMaterial', label: '知识库管理', icon: Database, description: '管理知识文档' },
+        { id: 'chat', path: '/courseMaterial/chat', label: '问答助手', icon: MessageSquare, description: '基于知识库问答' },
       ],
     },
   ];
@@ -54,8 +54,8 @@ export default function Layout() {
     if (path === '/upload') {
       return currentPath === '/upload' || currentPath === '/';
     }
-    if (path === '/knowledgebase') {
-      return currentPath === '/knowledgebase' || currentPath === '/knowledgebase/upload';
+    if (path === '/courseMaterial') {
+      return currentPath === '/courseMaterial' || currentPath === '/courseMaterial/upload';
     }
     return currentPath.startsWith(path);
   };
