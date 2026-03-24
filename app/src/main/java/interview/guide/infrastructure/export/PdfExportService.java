@@ -15,10 +15,10 @@ import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import interview.guide.common.exception.BusinessException;
 import interview.guide.common.exception.ErrorCode;
-import interview.guide.modules.interview.model.InterviewAnswerEntity;
-import interview.guide.modules.interview.model.InterviewSessionEntity;
-import interview.guide.modules.interview.model.ResumeAnalysisResponse;
-import interview.guide.modules.resume.model.ResumeEntity;
+import interview.guide.modules.tutoring.model.TutoringAnswerEntity;
+import interview.guide.modules.tutoring.model.TutoringSessionEntity;
+import interview.guide.modules.tutoring.model.StudentProfileAnalysisResponse;
+import interview.guide.modules.student.model.StudentProfileEntity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -80,9 +80,9 @@ public class PdfExportService {
     }
     
     /**
-     * 导出简历分析报告为PDF
+     * 导出学籍资料分析报告为PDF
      */
-    public byte[] exportResumeAnalysis(ResumeEntity resume, ResumeAnalysisResponse analysis) {
+    public byte[] exportStudentProfileAnalysis(StudentProfileEntity resume, StudentProfileAnalysisResponse analysis) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         PdfWriter writer = new PdfWriter(baos);
         PdfDocument pdfDoc = new PdfDocument(writer);
@@ -93,7 +93,7 @@ public class PdfExportService {
         document.setFont(font);
         
         // 标题
-        Paragraph title = new Paragraph("简历分析报告")
+        Paragraph title = new Paragraph("学业评估报告")
             .setFontSize(24)
             .setBold()
             .setTextAlignment(TextAlignment.CENTER)
@@ -103,13 +103,13 @@ public class PdfExportService {
         // 基本信息
         document.add(new Paragraph("\n"));
         document.add(createSectionTitle("基本信息"));
-        document.add(new Paragraph("文件名: " + resume.getOriginalFilename()));
+        document.add(new Paragraph("资料名称: " + resume.getOriginalFilename()));
         document.add(new Paragraph("上传时间: " + 
             (resume.getUploadedAt() != null ? DATE_FORMAT.format(resume.getUploadedAt()) : "未知")));
         
         // 总分
         document.add(new Paragraph("\n"));
-        document.add(createSectionTitle("综合评分"));
+        document.add(createSectionTitle("学力综合评分"));
         Paragraph scoreP = new Paragraph("总分: " + analysis.overallScore() + " / 100")
             .setFontSize(18)
             .setBold()
@@ -119,39 +119,39 @@ public class PdfExportService {
         // 各维度评分
         if (analysis.scoreDetail() != null) {
             document.add(new Paragraph("\n"));
-            document.add(createSectionTitle("各维度评分"));
+            document.add(createSectionTitle("知识掌握维度评分"));
             
             Table scoreTable = new Table(UnitValue.createPercentArray(new float[]{2, 1}))
                 .useAllAvailableWidth();
-            addScoreRow(scoreTable, "项目经验", analysis.scoreDetail().projectScore(), 40);
-            addScoreRow(scoreTable, "技能匹配度", analysis.scoreDetail().skillMatchScore(), 20);
-            addScoreRow(scoreTable, "内容完整性", analysis.scoreDetail().contentScore(), 15);
-            addScoreRow(scoreTable, "结构清晰度", analysis.scoreDetail().structureScore(), 15);
-            addScoreRow(scoreTable, "表达专业性", analysis.scoreDetail().expressionScore(), 10);
+            addScoreRow(scoreTable, "知识广度", analysis.scoreDetail().projectScore(), 40);
+            addScoreRow(scoreTable, "理解深度", analysis.scoreDetail().skillMatchScore(), 20);
+            addScoreRow(scoreTable, "逻辑严密性", analysis.scoreDetail().contentScore(), 15);
+            addScoreRow(scoreTable, "表达清晰度", analysis.scoreDetail().structureScore(), 15);
+            addScoreRow(scoreTable, "学术专业性", analysis.scoreDetail().expressionScore(), 10);
             document.add(scoreTable);
         }
         
-        // 简历摘要
+        // 资料摘要
         if (analysis.summary() != null) {
             document.add(new Paragraph("\n"));
-            document.add(createSectionTitle("简历摘要"));
+            document.add(createSectionTitle("学籍资料摘要"));
             document.add(new Paragraph(sanitizeText(analysis.summary())));
         }
         
-        // 优势亮点
+        // 学习优势
         if (analysis.strengths() != null && !analysis.strengths().isEmpty()) {
             document.add(new Paragraph("\n"));
-            document.add(createSectionTitle("优势亮点"));
+            document.add(createSectionTitle("学习优势"));
             for (String strength : analysis.strengths()) {
                 document.add(new Paragraph("• " + sanitizeText(strength)));
             }
         }
         
-        // 改进建议
+        // 学习改进建议
         if (analysis.suggestions() != null && !analysis.suggestions().isEmpty()) {
             document.add(new Paragraph("\n"));
-            document.add(createSectionTitle("改进建议"));
-            for (ResumeAnalysisResponse.Suggestion suggestion : analysis.suggestions()) {
+            document.add(createSectionTitle("学习改进建议"));
+            for (StudentProfileAnalysisResponse.Suggestion suggestion : analysis.suggestions()) {
                 document.add(new Paragraph("【" + suggestion.priority() + "】" + sanitizeText(suggestion.category()))
                     .setBold());
                 document.add(new Paragraph("问题: " + sanitizeText(suggestion.issue())));
@@ -165,9 +165,9 @@ public class PdfExportService {
     }
     
     /**
-     * 导出面试报告为PDF
+     * 导出学籍测评报告为PDF
      */
-    public byte[] exportInterviewReport(InterviewSessionEntity session) {
+    public byte[] exportTutoringReport(TutoringSessionEntity session) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         PdfWriter writer = new PdfWriter(baos);
         PdfDocument pdfDoc = new PdfDocument(writer);
@@ -178,7 +178,7 @@ public class PdfExportService {
         document.setFont(font);
         
         // 标题
-        Paragraph title = new Paragraph("模拟面试报告")
+        Paragraph title = new Paragraph("学情测评报告")
             .setFontSize(24)
             .setBold()
             .setTextAlignment(TextAlignment.CENTER)
@@ -187,10 +187,10 @@ public class PdfExportService {
         
         // 基本信息
         document.add(new Paragraph("\n"));
-        document.add(createSectionTitle("面试信息"));
+        document.add(createSectionTitle("测评信息"));
         document.add(new Paragraph("会话ID: " + session.getSessionId()));
         document.add(new Paragraph("题目数量: " + session.getTotalQuestions()));
-        document.add(new Paragraph("面试状态: " + getStatusText(session.getStatus())));
+        document.add(new Paragraph("测评状态: " + getStatusText(session.getStatus())));
         document.add(new Paragraph("开始时间: " + 
             (session.getCreatedAt() != null ? DATE_FORMAT.format(session.getCreatedAt()) : "未知")));
         if (session.getCompletedAt() != null) {
@@ -252,12 +252,12 @@ public class PdfExportService {
         }
         
         // 问答详情
-        List<InterviewAnswerEntity> answers = session.getAnswers();
+        List<TutoringAnswerEntity> answers = session.getAnswers();
         if (answers != null && !answers.isEmpty()) {
             document.add(new Paragraph("\n"));
             document.add(createSectionTitle("问答详情"));
             
-            for (InterviewAnswerEntity answer : answers) {
+            for (TutoringAnswerEntity answer : answers) {
                 document.add(new Paragraph("\n"));
                 document.add(new Paragraph("问题 " + (answer.getQuestionIndex() + 1) + 
                     " [" + (answer.getCategory() != null ? answer.getCategory() : "综合") + "]")
@@ -302,7 +302,7 @@ public class PdfExportService {
         return new DeviceRgb(231, 76, 60);                    // 红色
     }
     
-    private String getStatusText(InterviewSessionEntity.SessionStatus status) {
+    private String getStatusText(TutoringSessionEntity.SessionStatus status) {
         return switch (status) {
             case CREATED -> "已创建";
             case IN_PROGRESS -> "进行中";
