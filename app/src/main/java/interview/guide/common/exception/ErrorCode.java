@@ -18,24 +18,25 @@ public enum ErrorCode {
     NOT_FOUND(404, "资源不存在"),
     INTERNAL_ERROR(500, "服务器内部错误"),
     
-    // ========== 简历模块错误 2xxx ==========
-    RESUME_NOT_FOUND(2001, "简历不存在"),
-    RESUME_PARSE_FAILED(2002, "简历解析失败"),
-    RESUME_UPLOAD_FAILED(2003, "简历上传失败"),
-    RESUME_DUPLICATE(2004, "简历已存在"),
-    RESUME_FILE_EMPTY(2005, "简历文件为空"),
-    RESUME_FILE_TYPE_NOT_SUPPORTED(2006, "不支持的文件类型"),
-    RESUME_ANALYSIS_FAILED(2007, "简历分析失败"),
-    RESUME_ANALYSIS_NOT_FOUND(2008, "简历分析结果不存在"),
-    
-    // ========== 面试模块错误 3xxx ==========
-    INTERVIEW_SESSION_NOT_FOUND(3001, "面试会话不存在"),
-    INTERVIEW_SESSION_EXPIRED(3002, "面试会话已过期"),
-    INTERVIEW_QUESTION_NOT_FOUND(3003, "面试问题不存在"),
-    INTERVIEW_ALREADY_COMPLETED(3004, "面试已完成"),
-    INTERVIEW_EVALUATION_FAILED(3005, "面试评估失败"),
-    INTERVIEW_QUESTION_GENERATION_FAILED(3006, "面试问题生成失败"),
-    INTERVIEW_NOT_COMPLETED(3007, "面试尚未完成"),
+    // ========== 学情资料模块错误 2xxx ==========
+    RESUME_NOT_FOUND(2001, "资料不存在"),
+    RESUME_PARSE_FAILED(2002, "资料解析失败"),
+    RESUME_UPLOAD_FAILED(2003, "资料上传失败"),
+    RESUME_DUPLICATE(2004, "资料已存在"),
+    RESUME_FILE_EMPTY(2005, "文件内容为空"),
+
+    RESUME_ANALYSIS_FAILED(2007, "资料分析失败"),
+    RESUME_ANALYSIS_NOT_FOUND(2008, "分析结果不存在"),
+
+    // ========== 测评模块错误 3xxx ==========
+    INTERVIEW_SESSION_NOT_FOUND(3001, "测评会话不存在"),
+    INTERVIEW_SESSION_EXPIRED(3002, "测评会话已过期"),
+    INTERVIEW_QUESTION_NOT_FOUND(3003, "测评题目不存在"),
+    INTERVIEW_ALREADY_COMPLETED(3004, "测评已完成"),
+    INTERVIEW_EVALUATION_FAILED(3005, "评估失败"),
+    INTERVIEW_QUESTION_GENERATION_FAILED(3006, "题目生成失败"),
+    INTERVIEW_NOT_COMPLETED(3007, "测评尚未完成"),
+
     
     // ========== 存储模块错误 4xxx ==========
     STORAGE_UPLOAD_FAILED(4001, "文件上传失败"),
