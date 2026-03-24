@@ -1,56 +1,56 @@
 import {useEffect, useState} from 'react';
 import {AnimatePresence, motion} from 'framer-motion';
-import {interviewApi} from '../api/interview';
+import {tutoringApi} from '../api/tutoring';
 import ConfirmDialog from '../components/ConfirmDialog';
-import InterviewConfigPanel from '../components/InterviewConfigPanel';
-import InterviewChatPanel from '../components/InterviewChatPanel';
-import type {InterviewQuestion, InterviewSession} from '../types/interview';
+import TutoringConfigPanel from '../components/TutoringConfigPanel';
+import TutoringChatPanel from '../components/TutoringChatPanel';
+import type {TutoringQuestion, TutoringSession} from '../types/tutoring';
 
-type InterviewStage = 'config' | 'interview';
+type TutoringStage = 'config' | 'tutoring';
 
 interface Message {
-  type: 'interviewer' | 'user';
+  type: 'tutoringer' | 'user';
   content: string;
   category?: string;
   questionIndex?: number;
 }
 
-interface InterviewProps {
-  resumeText: string;
-  resumeId?: number;
+interface TutoringProps {
+  studentProfileText: string;
+  studentProfileId?: number;
   onBack: () => void;
-  onInterviewComplete: () => void;
+  onTutoringComplete: () => void;
 }
 
-export default function Interview({ resumeText, resumeId, onBack, onInterviewComplete }: InterviewProps) {
-  const [stage, setStage] = useState<InterviewStage>('config');
+export default function Tutoring({ studentProfileText, studentProfileId, onBack, onTutoringComplete }: TutoringProps) {
+  const [stage, setStage] = useState<TutoringStage>('config');
   const [questionCount, setQuestionCount] = useState(8);
-  const [session, setSession] = useState<InterviewSession | null>(null);
-  const [currentQuestion, setCurrentQuestion] = useState<InterviewQuestion | null>(null);
+  const [session, setSession] = useState<TutoringSession | null>(null);
+  const [currentQuestion, setCurrentQuestion] = useState<TutoringQuestion | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [answer, setAnswer] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [checkingUnfinished, setCheckingUnfinished] = useState(false);
-  const [unfinishedSession, setUnfinishedSession] = useState<InterviewSession | null>(null);
+  const [unfinishedSession, setUnfinishedSession] = useState<TutoringSession | null>(null);
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
   const [forceCreateNew, setForceCreateNew] = useState(false);
   
-  // 检查是否有未完成的面试（组件挂载时和resumeId变化时）
+  // 检查是否有未完成的面试（组件挂载时和studentProfileId变化时）
   useEffect(() => {
-    if (resumeId) {
+    if (studentProfileId) {
       checkUnfinishedSession();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resumeId]);
+  }, [studentProfileId]);
   
   const checkUnfinishedSession = async () => {
-    if (!resumeId) return;
+    if (!studentProfileId) return;
     
     setCheckingUnfinished(true);
     try {
-      const foundSession = await interviewApi.findUnfinishedSession(resumeId);
+      const foundSession = await tutoringApi.findUnfinishedSession(studentProfileId);
       if (foundSession) {
         setUnfinishedSession(foundSession);
       }
@@ -73,7 +73,7 @@ export default function Interview({ resumeText, resumeId, onBack, onInterviewCom
     setForceCreateNew(true);  // 标记需要强制创建新会话
   };
   
-  const restoreSession = (sessionToRestore: InterviewSession) => {
+  const restoreSession = (sessionToRestore: TutoringSession) => {
     setSession(sessionToRestore);
     
     // 恢复当前问题
@@ -91,7 +91,7 @@ export default function Interview({ resumeText, resumeId, onBack, onInterviewCom
       for (let i = 0; i <= sessionToRestore.currentQuestionIndex; i++) {
         const q = sessionToRestore.questions[i];
         restoredMessages.push({
-          type: 'interviewer',
+          type: 'tutoringer',
           content: q.question,
           category: q.category,
           questionIndex: i
@@ -106,19 +106,19 @@ export default function Interview({ resumeText, resumeId, onBack, onInterviewCom
       setMessages(restoredMessages);
     }
     
-    setStage('interview');
+    setStage('tutoring');
   };
   
-  const startInterview = async () => {
+  const startTutoring = async () => {
     setIsCreating(true);
     setError('');
     
     try {
       // 创建新面试（如果 forceCreateNew 为 true，则强制创建新会话）
-      const newSession = await interviewApi.createSession({
-        resumeText,
+      const newSession = await tutoringApi.createSession({
+        studentProfileText,
         questionCount,
-        resumeId,
+        studentProfileId,
         forceCreate: forceCreateNew
       });
       
@@ -141,14 +141,14 @@ export default function Interview({ resumeText, resumeId, onBack, onInterviewCom
           const firstQuestion = newSession.questions[0];
           setCurrentQuestion(firstQuestion);
           setMessages([{
-            type: 'interviewer',
+            type: 'tutoringer',
             content: firstQuestion.question,
             category: firstQuestion.category,
             questionIndex: 0
           }]);
         }
         
-        setStage('interview');
+        setStage('tutoring');
       }
     } catch (err) {
       setError('创建测验失败，请重试');
@@ -171,7 +171,7 @@ export default function Interview({ resumeText, resumeId, onBack, onInterviewCom
     setMessages(prev => [...prev, userMessage]);
 
     try {
-      const response = await interviewApi.submitAnswer({
+      const response = await tutoringApi.submitAnswer({
         sessionId: session.sessionId,
         questionIndex: currentQuestion.questionIndex,
         answer: answer.trim()
@@ -182,14 +182,14 @@ export default function Interview({ resumeText, resumeId, onBack, onInterviewCom
       if (response.hasNextQuestion && response.nextQuestion) {
         setCurrentQuestion(response.nextQuestion);
         setMessages(prev => [...prev, {
-          type: 'interviewer',
+          type: 'tutoringer',
           content: response.nextQuestion!.question,
           category: response.nextQuestion!.category,
           questionIndex: response.nextQuestion!.questionIndex
         }]);
       } else {
         // 测验已完成，评估将在后台进行，跳转到测验记录页
-        onInterviewComplete();
+        onTutoringComplete();
       }
     } catch (err) {
       setError('提交答案失败，请重试');
@@ -204,10 +204,10 @@ export default function Interview({ resumeText, resumeId, onBack, onInterviewCom
 
     setIsSubmitting(true);
     try {
-      await interviewApi.completeInterview(session.sessionId);
+      await tutoringApi.completeTutoring(session.sessionId);
       setShowCompleteConfirm(false);
       // 测验已完成，评估将在后台进行，跳转到测验记录页
-      onInterviewComplete();
+      onTutoringComplete();
     } catch (err) {
       setError('提前交卷失败，请重试');
       console.error(err);
@@ -219,16 +219,16 @@ export default function Interview({ resumeText, resumeId, onBack, onInterviewCom
   // 配置界面
   const renderConfig = () => {
     return (
-      <InterviewConfigPanel
+      <TutoringConfigPanel
         questionCount={questionCount}
         onQuestionCountChange={setQuestionCount}
-        onStart={startInterview}
+        onStart={startTutoring}
         isCreating={isCreating}
         checkingUnfinished={checkingUnfinished}
         unfinishedSession={unfinishedSession}
         onContinueUnfinished={handleContinueUnfinished}
         onStartNew={handleStartNew}
-        resumeText={resumeText}
+        studentProfileText={studentProfileText}
         onBack={onBack}
         error={error}
       />
@@ -236,11 +236,11 @@ export default function Interview({ resumeText, resumeId, onBack, onInterviewCom
   };
   
   // 面试对话界面
-  const renderInterview = () => {
+  const renderTutoring = () => {
     if (!session || !currentQuestion) return null;
 
     return (
-      <InterviewChatPanel
+      <TutoringChatPanel
         session={session}
         currentQuestion={currentQuestion}
         messages={messages}
@@ -257,7 +257,7 @@ export default function Interview({ resumeText, resumeId, onBack, onInterviewCom
 
   const stageSubtitles = {
     config: '配置您的测验参数',
-    interview: '认真回答每个问题，展示您的学习成果'
+    tutoring: '认真回答每个问题，展示您的学习成果'
   };
   
   return (
@@ -294,15 +294,15 @@ export default function Interview({ resumeText, resumeId, onBack, onInterviewCom
             {renderConfig()}
           </motion.div>
         )}
-        {stage === 'interview' && (
+        {stage === 'tutoring' && (
           <motion.div
-            key="interview"
+            key="tutoring"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
           >
-            {renderInterview()}
+            {renderTutoring()}
           </motion.div>
         )}
       </AnimatePresence>

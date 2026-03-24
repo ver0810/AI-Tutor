@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { historyApi, InterviewItem, EvaluateStatus } from '../api/history';
+import { historyApi, TutoringItem, EvaluateStatus } from '../api/history';
 import { formatDate } from '../utils/date';
 import DeleteConfirmDialog from '../components/DeleteConfirmDialog';
 import {
@@ -19,19 +19,19 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
-interface InterviewHistoryPageProps {
+interface TutoringHistoryPageProps {
   onBack: () => void;
-  onViewInterview: (sessionId: string, resumeId?: number) => void;
+  onViewTutoring: (sessionId: string, studentProfileId?: number) => void;
 }
 
-interface InterviewWithResume extends InterviewItem {
-  resumeId: number;
-  resumeFilename: string;
+interface TutoringWithStudentProfile extends TutoringItem {
+  studentProfileId: number;
+  studentProfileFilename: string;
   evaluateStatus?: EvaluateStatus;
   evaluateError?: string;
 }
 
-interface InterviewStats {
+interface TutoringStats {
   totalCount: number;
   completedCount: number;
   averageScore: number;
@@ -78,44 +78,44 @@ function isCompletedStatus(status: string): boolean {
 }
 
 // 判断评估是否完成
-function isEvaluateCompleted(interview: InterviewWithResume): boolean {
+function isEvaluateCompleted(tutoring: TutoringWithStudentProfile): boolean {
   // 如果 evaluateStatus 存在且为 COMPLETED，则评估已完成
-  if (interview.evaluateStatus === 'COMPLETED') return true;
+  if (tutoring.evaluateStatus === 'COMPLETED') return true;
   // 向后兼容：如果 status 为 EVALUATED，也认为评估已完成
-  if (interview.status === 'EVALUATED') return true;
+  if (tutoring.status === 'EVALUATED') return true;
   return false;
 }
 
 // 判断是否正在评估中
-function isEvaluating(interview: InterviewWithResume): boolean {
-  return interview.evaluateStatus === 'PENDING' || interview.evaluateStatus === 'PROCESSING';
+function isEvaluating(tutoring: TutoringWithStudentProfile): boolean {
+  return tutoring.evaluateStatus === 'PENDING' || tutoring.evaluateStatus === 'PROCESSING';
 }
 
 // 判断评估是否失败
-function isEvaluateFailed(interview: InterviewWithResume): boolean {
-  return interview.evaluateStatus === 'FAILED';
+function isEvaluateFailed(tutoring: TutoringWithStudentProfile): boolean {
+  return tutoring.evaluateStatus === 'FAILED';
 }
 
 // 状态图标
-function StatusIcon({ interview }: { interview: InterviewWithResume }) {
+function StatusIcon({ tutoring }: { tutoring: TutoringWithStudentProfile }) {
   // 评估失败
-  if (isEvaluateFailed(interview)) {
+  if (isEvaluateFailed(tutoring)) {
     return <AlertCircle className="w-4 h-4 text-red-500" />;
   }
   // 正在评估
-  if (isEvaluating(interview)) {
+  if (isEvaluating(tutoring)) {
     return <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />;
   }
   // 评估完成
-  if (isEvaluateCompleted(interview)) {
+  if (isEvaluateCompleted(tutoring)) {
     return <CheckCircle className="w-4 h-4 text-green-500" />;
   }
   // 面试进行中
-  if (interview.status === 'IN_PROGRESS') {
+  if (tutoring.status === 'IN_PROGRESS') {
     return <PlayCircle className="w-4 h-4 text-blue-500" />;
   }
   // 面试已完成但评估未开始
-  if (isCompletedStatus(interview.status)) {
+  if (isCompletedStatus(tutoring.status)) {
     return <Clock className="w-4 h-4 text-yellow-500" />;
   }
   // 已创建
@@ -123,25 +123,25 @@ function StatusIcon({ interview }: { interview: InterviewWithResume }) {
 }
 
 // 状态文本
-function getStatusText(interview: InterviewWithResume): string {
+function getStatusText(tutoring: TutoringWithStudentProfile): string {
   // 评估失败
-  if (isEvaluateFailed(interview)) {
+  if (isEvaluateFailed(tutoring)) {
     return '评估失败';
   }
   // 正在评估
-  if (isEvaluating(interview)) {
-    return interview.evaluateStatus === 'PROCESSING' ? '评估中' : '等待评估';
+  if (isEvaluating(tutoring)) {
+    return tutoring.evaluateStatus === 'PROCESSING' ? '评估中' : '等待评估';
   }
   // 评估完成
-  if (isEvaluateCompleted(interview)) {
+  if (isEvaluateCompleted(tutoring)) {
     return '已完成';
   }
   // 面试进行中
-  if (interview.status === 'IN_PROGRESS') {
+  if (tutoring.status === 'IN_PROGRESS') {
     return '进行中';
   }
   // 面试已完成但评估未开始
-  if (isCompletedStatus(interview.status)) {
+  if (isCompletedStatus(tutoring.status)) {
     return '已提交';
   }
   return '已创建';
@@ -154,49 +154,49 @@ function getScoreColor(score: number): string {
   return 'bg-red-500';
 }
 
-export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview }: InterviewHistoryPageProps) {
-  const [interviews, setInterviews] = useState<InterviewWithResume[]>([]);
-  const [stats, setStats] = useState<InterviewStats | null>(null);
+export default function TutoringHistoryPage({ onBack: _onBack, onViewTutoring }: TutoringHistoryPageProps) {
+  const [tutorings, setTutorings] = useState<TutoringWithStudentProfile[]>([]);
+  const [stats, setStats] = useState<TutoringStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
-  const [deleteItem, setDeleteItem] = useState<InterviewWithResume | null>(null);
+  const [deleteItem, setDeleteItem] = useState<TutoringWithStudentProfile | null>(null);
   const [exporting, setExporting] = useState<string | null>(null);
   const pollingRef = useRef<number | null>(null);
 
-  const loadAllInterviews = useCallback(async (isPolling = false) => {
+  const loadAllTutorings = useCallback(async (isPolling = false) => {
     if (!isPolling) {
       setLoading(true);
     }
     try {
-      const resumes = await historyApi.getResumes();
-      const allInterviews: InterviewWithResume[] = [];
+      const studentProfiles = await historyApi.getStudentProfiles();
+      const allTutorings: TutoringWithStudentProfile[] = [];
 
-      for (const resume of resumes) {
-        const detail = await historyApi.getResumeDetail(resume.id);
-        if (detail.interviews && detail.interviews.length > 0) {
-          detail.interviews.forEach(interview => {
-            allInterviews.push({
-              ...interview,
-              resumeId: resume.id,
-              resumeFilename: resume.filename
+      for (const studentProfile of studentProfiles) {
+        const detail = await historyApi.getStudentProfileDetail(studentProfile.id);
+        if (detail.tutorings && detail.tutorings.length > 0) {
+          detail.tutorings.forEach(tutoring => {
+            allTutorings.push({
+              ...tutoring,
+              studentProfileId: studentProfile.id,
+              studentProfileFilename: studentProfile.filename
             });
           });
         }
       }
 
       // 按创建时间倒序排序
-      allInterviews.sort((a, b) =>
+      allTutorings.sort((a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
 
-      setInterviews(allInterviews);
+      setTutorings(allTutorings);
 
       // 计算统计信息（只统计评估已完成的面试）
-      const evaluated = allInterviews.filter(i => isEvaluateCompleted(i));
+      const evaluated = allTutorings.filter(i => isEvaluateCompleted(i));
       const totalScore = evaluated.reduce((sum, i) => sum + (i.overallScore || 0), 0);
       setStats({
-        totalCount: allInterviews.length,
+        totalCount: allTutorings.length,
         completedCount: evaluated.length,
         averageScore: evaluated.length > 0 ? Math.round(totalScore / evaluated.length) : 0,
       });
@@ -211,18 +211,18 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview 
 
   // 初始加载
   useEffect(() => {
-    loadAllInterviews();
-  }, [loadAllInterviews]);
+    loadAllTutorings();
+  }, [loadAllTutorings]);
 
   // 轮询检查评估状态
   useEffect(() => {
     // 检查是否有正在评估的面试
-    const hasEvaluating = interviews.some(i => isEvaluating(i));
+    const hasEvaluating = tutorings.some(i => isEvaluating(i));
 
     if (hasEvaluating) {
       // 启动轮询
       pollingRef.current = window.setInterval(() => {
-        loadAllInterviews(true);
+        loadAllTutorings(true);
       }, 3000); // 每3秒轮询一次
     } else {
       // 停止轮询
@@ -238,11 +238,11 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview 
         pollingRef.current = null;
       }
     };
-  }, [interviews, loadAllInterviews]);
+  }, [tutorings, loadAllTutorings]);
 
-  const handleDeleteClick = (interview: InterviewWithResume, e: React.MouseEvent) => {
+  const handleDeleteClick = (tutoring: TutoringWithStudentProfile, e: React.MouseEvent) => {
     e.stopPropagation();
-    setDeleteItem(interview);
+    setDeleteItem(tutoring);
   };
 
   const handleDeleteConfirm = async () => {
@@ -250,8 +250,8 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview 
 
     setDeletingSessionId(deleteItem.sessionId);
     try {
-      await historyApi.deleteInterview(deleteItem.sessionId);
-      await loadAllInterviews();
+      await historyApi.deleteTutoring(deleteItem.sessionId);
+      await loadAllTutorings();
       setDeleteItem(null);
     } catch (err) {
       alert(err instanceof Error ? err.message : '删除失败，请稍后重试');
@@ -264,7 +264,7 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview 
     e.stopPropagation();
     setExporting(sessionId);
     try {
-      const blob = await historyApi.exportInterviewPdf(sessionId);
+      const blob = await historyApi.exportTutoringPdf(sessionId);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -280,8 +280,8 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview 
     }
   };
 
-  const filteredInterviews = interviews.filter(interview =>
-    interview.resumeFilename.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredTutorings = tutorings.filter(tutoring =>
+    tutoring.studentProfileFilename.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -360,7 +360,7 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview 
       )}
 
       {/* 空状态 */}
-      {!loading && filteredInterviews.length === 0 && (
+      {!loading && filteredTutorings.length === 0 && (
         <motion.div
           className="text-center py-20 bg-white rounded-2xl shadow-sm border border-slate-100"
           initial={{ opacity: 0, scale: 0.95 }}
@@ -373,7 +373,7 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview 
       )}
 
       {/* 表格 */}
-      {!loading && filteredInterviews.length > 0 && (
+      {!loading && filteredTutorings.length > 0 && (
         <motion.div
           className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden"
           initial={{ opacity: 0, y: 20 }}
@@ -393,72 +393,72 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview 
             </thead>
             <tbody>
               <AnimatePresence>
-                {filteredInterviews.map((interview, index) => (
+                {filteredTutorings.map((tutoring, index) => (
                   <motion.tr
-                    key={interview.sessionId}
+                    key={tutoring.sessionId}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    onClick={() => onViewInterview(interview.sessionId, interview.resumeId)}
+                    onClick={() => onViewTutoring(tutoring.sessionId, tutoring.studentProfileId)}
                     className="border-b border-slate-50 hover:bg-slate-50 cursor-pointer transition-colors group"
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <FileText className="w-5 h-5 text-slate-400" />
                         <div>
-                          <p className="font-medium text-slate-800">{interview.resumeFilename}</p>
-                          <p className="text-xs text-slate-400">#{interview.sessionId.slice(-8)}</p>
+                          <p className="font-medium text-slate-800">{tutoring.studentProfileFilename}</p>
+                          <p className="text-xs text-slate-400">#{tutoring.sessionId.slice(-8)}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-sm">
-                        {interview.totalQuestions} 题
+                        {tutoring.totalQuestions} 题
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <StatusIcon interview={interview} />
+                        <StatusIcon tutoring={tutoring} />
                         <span className="text-sm text-slate-600">
-                          {getStatusText(interview)}
+                          {getStatusText(tutoring)}
                         </span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      {isEvaluateCompleted(interview) && interview.overallScore !== null ? (
+                      {isEvaluateCompleted(tutoring) && tutoring.overallScore !== null ? (
                         <div className="flex items-center gap-3">
                           <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
                             <motion.div
-                              className={`h-full ${getScoreColor(interview.overallScore)} rounded-full`}
+                              className={`h-full ${getScoreColor(tutoring.overallScore)} rounded-full`}
                               initial={{ width: 0 }}
-                              animate={{ width: `${interview.overallScore}%` }}
+                              animate={{ width: `${tutoring.overallScore}%` }}
                               transition={{ duration: 0.8, delay: index * 0.05 }}
                             />
                           </div>
-                          <span className="font-bold text-slate-800">{interview.overallScore}</span>
+                          <span className="font-bold text-slate-800">{tutoring.overallScore}</span>
                         </div>
-                      ) : isEvaluating(interview) ? (
+                      ) : isEvaluating(tutoring) ? (
                         <span className="text-blue-500 text-sm">生成中...</span>
-                      ) : isEvaluateFailed(interview) ? (
-                        <span className="text-red-500 text-sm" title={interview.evaluateError}>失败</span>
+                      ) : isEvaluateFailed(tutoring) ? (
+                        <span className="text-red-500 text-sm" title={tutoring.evaluateError}>失败</span>
                       ) : (
                         <span className="text-slate-400">-</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-500">
-                      {formatDate(interview.createdAt)}
+                      {formatDate(tutoring.createdAt)}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1">
                         {/* 导出按钮 */}
-                        {isEvaluateCompleted(interview) && (
+                        {isEvaluateCompleted(tutoring) && (
                           <button
-                            onClick={(e) => handleExport(interview.sessionId, e)}
-                            disabled={exporting === interview.sessionId}
+                            onClick={(e) => handleExport(tutoring.sessionId, e)}
+                            disabled={exporting === tutoring.sessionId}
                             className="p-2 text-slate-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors disabled:opacity-50"
                             title="导出PDF"
                           >
-                            {exporting === interview.sessionId ? (
+                            {exporting === tutoring.sessionId ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
                               <Download className="w-4 h-4" />
@@ -467,8 +467,8 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview 
                         )}
                         {/* 删除按钮 */}
                         <button
-                          onClick={(e) => handleDeleteClick(interview, e)}
-                          disabled={deletingSessionId === interview.sessionId}
+                          onClick={(e) => handleDeleteClick(tutoring, e)}
+                          disabled={deletingSessionId === tutoring.sessionId}
                           className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
                           title="删除"
                         >
