@@ -37,7 +37,7 @@ export default function Tutoring({ studentProfileText, studentProfileId, onBack,
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
   const [forceCreateNew, setForceCreateNew] = useState(false);
   
-  // 检查是否有未完成的面试（组件挂载时和studentProfileId变化时）
+  // 检查是否有未完成的测验（组件挂载时和studentProfileId变化时）
   useEffect(() => {
     if (studentProfileId) {
       checkUnfinishedSession();
@@ -55,7 +55,7 @@ export default function Tutoring({ studentProfileText, studentProfileId, onBack,
         setUnfinishedSession(foundSession);
       }
     } catch (err) {
-      console.error('检查未完成面试失败', err);
+      console.error('检查未完成测验失败', err);
     } finally {
       setCheckingUnfinished(false);
     }
@@ -114,7 +114,7 @@ export default function Tutoring({ studentProfileText, studentProfileId, onBack,
     setError('');
     
     try {
-      // 创建新面试（如果 forceCreateNew 为 true，则强制创建新会话）
+      // 创建新测验（如果 forceCreateNew 为 true，则强制创建新会话）
       const newSession = await tutoringApi.createSession({
         studentProfileText,
         questionCount,
@@ -235,7 +235,7 @@ export default function Tutoring({ studentProfileText, studentProfileId, onBack,
     );
   };
   
-  // 面试对话界面
+  // 测验问答界面
   const renderTutoring = () => {
     if (!session || !currentQuestion) return null;
 

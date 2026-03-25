@@ -80,9 +80,9 @@ public class AnswerGradingService {
             StructuredOutputInvoker structuredOutputInvoker,
             @Value("classpath:prompts/assignment-grading-system.st") Resource systemPromptResource,
             @Value("classpath:prompts/assignment-grading-user.st") Resource userPromptResource,
-            @Value("classpath:prompts/assignment-grading-system.st") Resource summarySystemPromptResource,
-            @Value("classpath:prompts/assignment-grading-user.st") Resource summaryUserPromptResource,
-            @Value("${app.tutoring.evaluation.batch-size:8}") int evaluationBatchSize) throws IOException {
+            @Value("classpath:prompts/assignment-summary-system.st") Resource summarySystemPromptResource,
+            @Value("classpath:prompts/assignment-summary-user.st") Resource summaryUserPromptResource,
+            @Value("${app.tutor.evaluation.batch-size:${app.tutoring.evaluation.batch-size:8}}") int evaluationBatchSize) throws IOException {
         this.chatClient = chatClientBuilder.build();
         this.structuredOutputInvoker = structuredOutputInvoker;
         this.systemPromptTemplate = new PromptTemplate(systemPromptResource.getContentAsString(StandardCharsets.UTF_8));

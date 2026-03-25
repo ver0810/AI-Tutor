@@ -8,7 +8,7 @@ interface TutoringDetailPanelProps {
 }
 
 /**
- * 面试详情面板组件
+ * 测验详情面板组件
  */
 export default function TutoringDetailPanel({ tutoring }: TutoringDetailPanelProps) {
   // 默认展开所有题目
@@ -130,7 +130,7 @@ function ScoreCard({
           </div>
         </div>
         
-        <h3 className="text-2xl font-bold mb-3">面试评估</h3>
+        <h3 className="text-2xl font-bold mb-3">测验评估</h3>
         <p className="text-white/90 max-w-2xl leading-relaxed">
           {feedback || '表现良好，展示了扎实的技术基础。'}
         </p>
@@ -344,4 +344,3 @@ function QuestionCard({
     </motion.div>
   );
 }
-

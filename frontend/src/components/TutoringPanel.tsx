@@ -27,7 +27,7 @@ interface TutoringPanelProps {
 }
 
 /**
- * 面试记录面板组件
+ * 测验记录面板组件
  */
 export default function TutoringPanel({
   tutorings,
@@ -95,7 +95,7 @@ export default function TutoringPanel({
 
   return (
     <div className="space-y-6">
-      {/* 面试表现趋势图 */}
+      {/* 测验表现趋势图 */}
       {chartData.length > 0 && (
         <motion.div 
           className="bg-white rounded-2xl p-6"
@@ -149,7 +149,7 @@ export default function TutoringPanel({
         </motion.div>
       )}
 
-      {/* 历史面试场次 */}
+      {/* 历史测验场次 */}
       <motion.div 
         className="bg-white rounded-2xl p-6"
         initial={{ opacity: 0, y: 20 }}
@@ -163,7 +163,7 @@ export default function TutoringPanel({
         <div className="space-y-4">
           {tutorings.map((tutoring, index) => (
             <TutoringItemCard
-              key={tutoring.id}
+              key={tutoring.sessionId}
               tutoring={tutoring}
               index={index}
               total={tutorings.length}
@@ -179,8 +179,8 @@ export default function TutoringPanel({
         {/* 删除确认对话框 */}
         <ConfirmDialog
           open={deleteConfirm !== null}
-          title="删除面试记录"
-          message="确定要删除这条面试记录吗？删除后无法恢复。"
+          title="删除测验记录"
+          message="确定要删除这条测验记录吗？删除后无法恢复。"
           confirmText="确定删除"
           cancelText="取消"
           confirmVariant="danger"
@@ -197,7 +197,7 @@ export default function TutoringPanel({
                 animate={{ rotate: 360 }}
                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
               />
-              <span className="text-slate-600">加载面试详情...</span>
+              <span className="text-slate-600">加载测验详情...</span>
             </div>
           </div>
         )}
@@ -206,7 +206,7 @@ export default function TutoringPanel({
   );
 }
 
-// 面试项卡片组件
+// 测验项卡片组件
 function TutoringItemCard({
   tutoring,
   index,
@@ -246,7 +246,7 @@ function TutoringItemCard({
       {/* 信息 */}
       <div className="flex-1 min-w-0">
         <p className="font-medium text-slate-800 truncate">
-          模拟面试 #{total - index}
+          测验记录 #{total - index}
         </p>
         <div className="flex items-center gap-4 text-sm text-slate-500">
           <span className="flex items-center gap-1">
@@ -278,7 +278,7 @@ function TutoringItemCard({
           onClick={onDelete}
           disabled={deleting}
           className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          title="删除面试记录"
+          title="删除测验记录"
         >
           {deleting ? (
             <motion.div
@@ -297,4 +297,3 @@ function TutoringItemCard({
     </motion.div>
   );
 }
-

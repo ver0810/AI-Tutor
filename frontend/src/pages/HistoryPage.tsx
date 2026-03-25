@@ -207,7 +207,7 @@ export default function HistoryList({ onSelectStudentProfile }: HistoryListProps
                           onClick={(e) => handleDeleteClick(studentProfile.id, studentProfile.filename, e)}
                           disabled={deletingId === studentProfile.id}
                           className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          title="删除简历"
+                          title="删除课程资料"
                         >
                           {deletingId === studentProfile.id ? (
                             <motion.div

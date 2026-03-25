@@ -175,7 +175,6 @@ export default function HistoryList({ onSelectStudentProfile }: HistoryListProps
     }
   }, [studentProfiles, loading, loadDataSilent]);
 
-  // 下载简历
   const handleDownload = (studentProfile: StudentProfileListItem, e: React.MouseEvent) => {
     e.stopPropagation();
     if (studentProfile.storageUrl) {
@@ -241,7 +240,7 @@ export default function HistoryList({ onSelectStudentProfile }: HistoryListProps
             animate={{ opacity: 1, x: 0 }}
           >
             <FileStack className="w-7 h-7 text-primary-500" />
-            简历库
+            课程资料库
           </motion.h1>
           <motion.p
             className="text-slate-500 mt-1"
@@ -249,7 +248,7 @@ export default function HistoryList({ onSelectStudentProfile }: HistoryListProps
             animate={{ opacity: 1 }}
             transition={{ delay: 0.1 }}
           >
-            管理您已分析过的所有简历及面试记录
+            管理您已分析过的所有课程资料及测验记录
           </motion.p>
         </div>
 
@@ -261,7 +260,7 @@ export default function HistoryList({ onSelectStudentProfile }: HistoryListProps
           <Search className="w-5 h-5 text-slate-400" />
           <input
             type="text"
-            placeholder="搜索简历..."
+            placeholder="搜索课程资料..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="flex-1 outline-none text-slate-700 placeholder:text-slate-400"
@@ -274,13 +273,13 @@ export default function HistoryList({ onSelectStudentProfile }: HistoryListProps
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <StatCard
             icon={FileStack}
-            label="简历总数"
+            label="资料总数"
             value={stats.totalCount}
             color="bg-primary-500"
           />
           <StatCard
             icon={MessageSquare}
-            label="面试总数"
+            label="测验总数"
             value={stats.totalTutoringCount}
             color="bg-indigo-500"
           />
@@ -308,8 +307,8 @@ export default function HistoryList({ onSelectStudentProfile }: HistoryListProps
           animate={{ opacity: 1, scale: 1 }}
         >
           <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-slate-700 mb-2">暂无简历记录</h3>
-          <p className="text-slate-500">上传简历开始您的第一次 AI 面试分析</p>
+          <h3 className="text-xl font-semibold text-slate-700 mb-2">暂无课程资料</h3>
+          <p className="text-slate-500">上传课程资料开始您的第一次 AI 助教分析</p>
         </motion.div>
       )}
 
@@ -328,7 +327,7 @@ export default function HistoryList({ onSelectStudentProfile }: HistoryListProps
                 <th className="text-left px-6 py-4 text-sm font-medium text-slate-600">大小</th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-slate-600">分析状态</th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-slate-600">AI 评分</th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-slate-600">面试</th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-slate-600">测验</th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-slate-600">上传时间</th>
                 <th className="text-right px-6 py-4 text-sm font-medium text-slate-600">操作</th>
               </tr>
@@ -387,7 +386,7 @@ export default function HistoryList({ onSelectStudentProfile }: HistoryListProps
                           {studentProfile.tutoringCount} 次
                         </span>
                       ) : (
-                        <span className="inline-flex px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-sm">待面试</span>
+                        <span className="inline-flex px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-sm">待测验</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-500">
@@ -440,7 +439,7 @@ export default function HistoryList({ onSelectStudentProfile }: HistoryListProps
       <DeleteConfirmDialog
         open={deleteItem !== null}
         item={deleteItem ? { id: deleteItem.id, name: deleteItem.filename } : null}
-        itemType="简历"
+        itemType="课程资料"
         loading={deletingId !== null}
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteItem(null)}

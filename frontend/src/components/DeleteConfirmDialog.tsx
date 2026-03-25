@@ -11,7 +11,7 @@ export interface DeleteItem {
 export interface DeleteConfirmDialogProps {
   open: boolean;
   item: DeleteItem | null;
-  itemType: string; // 如 "课程资料"、"对话"、"简历"、"面试记录"
+  itemType: string; // 如 "课程资料"、"对话"、"测验记录"
   loading?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
@@ -56,4 +56,3 @@ export default function DeleteConfirmDialog({
     />
   );
 }
-

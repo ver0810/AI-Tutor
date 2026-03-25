@@ -28,7 +28,7 @@ interface TutoringChatPanelProps {
 }
 
 /**
- * 面试聊天面板组件
+ * 测验聊天面板组件
  */
 export default function TutoringChatPanel({
   session,
@@ -194,4 +194,3 @@ function MessageBubble({ message }: { message: Message }) {
     </motion.div>
   );
 }
-

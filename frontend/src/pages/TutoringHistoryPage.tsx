@@ -28,7 +28,7 @@ interface TutoringWithStudentProfile extends TutoringItem {
   studentProfileId: number;
   studentProfileFilename: string;
   evaluateStatus?: EvaluateStatus;
-  evaluateError?: string;
+  evaluateError?: string | null;
 }
 
 interface TutoringStats {
@@ -110,11 +110,11 @@ function StatusIcon({ tutoring }: { tutoring: TutoringWithStudentProfile }) {
   if (isEvaluateCompleted(tutoring)) {
     return <CheckCircle className="w-4 h-4 text-green-500" />;
   }
-  // 面试进行中
+  // 测验进行中
   if (tutoring.status === 'IN_PROGRESS') {
     return <PlayCircle className="w-4 h-4 text-blue-500" />;
   }
-  // 面试已完成但评估未开始
+  // 测验已完成但评估未开始
   if (isCompletedStatus(tutoring.status)) {
     return <Clock className="w-4 h-4 text-yellow-500" />;
   }
@@ -136,11 +136,11 @@ function getStatusText(tutoring: TutoringWithStudentProfile): string {
   if (isEvaluateCompleted(tutoring)) {
     return '已完成';
   }
-  // 面试进行中
+  // 测验进行中
   if (tutoring.status === 'IN_PROGRESS') {
     return '进行中';
   }
-  // 面试已完成但评估未开始
+  // 测验已完成但评估未开始
   if (isCompletedStatus(tutoring.status)) {
     return '已提交';
   }
@@ -192,7 +192,7 @@ export default function TutoringHistoryPage({ onBack: _onBack, onViewTutoring }:
 
       setTutorings(allTutorings);
 
-      // 计算统计信息（只统计评估已完成的面试）
+      // 计算统计信息（只统计评估已完成的测验）
       const evaluated = allTutorings.filter(i => isEvaluateCompleted(i));
       const totalScore = evaluated.reduce((sum, i) => sum + (i.overallScore || 0), 0);
       setStats({
@@ -216,7 +216,7 @@ export default function TutoringHistoryPage({ onBack: _onBack, onViewTutoring }:
 
   // 轮询检查评估状态
   useEffect(() => {
-    // 检查是否有正在评估的面试
+    // 检查是否有正在评估的测验
     const hasEvaluating = tutorings.some(i => isEvaluating(i));
 
     if (hasEvaluating) {
@@ -440,7 +440,7 @@ export default function TutoringHistoryPage({ onBack: _onBack, onViewTutoring }:
                       ) : isEvaluating(tutoring) ? (
                         <span className="text-blue-500 text-sm">生成中...</span>
                       ) : isEvaluateFailed(tutoring) ? (
-                        <span className="text-red-500 text-sm" title={tutoring.evaluateError}>失败</span>
+                        <span className="text-red-500 text-sm" title={tutoring.evaluateError ?? undefined}>失败</span>
                       ) : (
                         <span className="text-slate-400">-</span>
                       )}
@@ -488,7 +488,7 @@ export default function TutoringHistoryPage({ onBack: _onBack, onViewTutoring }:
       {/* 删除确认对话框 */}
       <DeleteConfirmDialog
         open={deleteItem !== null}
-        item={deleteItem ? { id: deleteItem.id, sessionId: deleteItem.sessionId } : null}
+        item={deleteItem ? { id: deleteItem.id, name: deleteItem.sessionId } : null}
         itemType="测验记录"
         loading={deletingSessionId !== null}
         onConfirm={handleDeleteConfirm}

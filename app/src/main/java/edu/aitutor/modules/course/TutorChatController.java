@@ -27,7 +27,7 @@ public class TutorChatController {
     /**
      * 创建新会话
      */
-    @PostMapping("/api/rag-chat/sessions")
+    @PostMapping({"/api/rag-chat/sessions", "/api/tutor-chat/sessions"})
     public Result<SessionDTO> createSession(@Valid @RequestBody TutorChatDTO.CreateSessionRequest request) {
         return Result.success(sessionService.createSession(request));
     }
@@ -35,7 +35,7 @@ public class TutorChatController {
     /**
      * 获取会话列表
      */
-    @GetMapping("/api/rag-chat/sessions")
+    @GetMapping({"/api/rag-chat/sessions", "/api/tutor-chat/sessions"})
     public Result<List<SessionListItemDTO>> listSessions() {
         return Result.success(sessionService.listSessions());
     }
@@ -44,7 +44,7 @@ public class TutorChatController {
      * 获取会话详情（包含消息历史）
      * GET /api/rag-chat/sessions/{sessionId}
      */
-    @GetMapping("/api/rag-chat/sessions/{sessionId}")
+    @GetMapping({"/api/rag-chat/sessions/{sessionId}", "/api/tutor-chat/sessions/{sessionId}"})
     public Result<SessionDetailDTO> getSessionDetail(@PathVariable Long sessionId) {
         return Result.success(sessionService.getSessionDetail(sessionId));
     }
@@ -52,7 +52,7 @@ public class TutorChatController {
     /**
      * 更新会话标题
      */
-    @PutMapping("/api/rag-chat/sessions/{sessionId}/title")
+    @PutMapping({"/api/rag-chat/sessions/{sessionId}/title", "/api/tutor-chat/sessions/{sessionId}/title"})
     public Result<Void> updateSessionTitle(
             @PathVariable Long sessionId,
             @Valid @RequestBody TutorChatDTO.UpdateTitleRequest request) {
@@ -64,7 +64,7 @@ public class TutorChatController {
      * 切换会话置顶状态
      * PUT /api/rag-chat/sessions/{sessionId}/pin
      */
-    @PutMapping("/api/rag-chat/sessions/{sessionId}/pin")
+    @PutMapping({"/api/rag-chat/sessions/{sessionId}/pin", "/api/tutor-chat/sessions/{sessionId}/pin"})
     public Result<Void> togglePin(@PathVariable Long sessionId) {
         sessionService.togglePin(sessionId);
         return Result.success(null);
@@ -73,7 +73,12 @@ public class TutorChatController {
     /**
      * 更新会话知识库
      */
-    @PutMapping("/api/rag-chat/sessions/{sessionId}/knowledge-bases")
+    @PutMapping({
+            "/api/rag-chat/sessions/{sessionId}/knowledge-bases",
+            "/api/rag-chat/sessions/{sessionId}/course-materials",
+            "/api/tutor-chat/sessions/{sessionId}/knowledge-bases",
+            "/api/tutor-chat/sessions/{sessionId}/course-materials"
+    })
     public Result<Void> updateSessionCourseMaterials(
             @PathVariable Long sessionId,
             @Valid @RequestBody TutorChatDTO.UpdateCourseMaterialsRequest request) {
@@ -85,7 +90,7 @@ public class TutorChatController {
      * 删除会话
      * DELETE /api/rag-chat/sessions/{sessionId}
      */
-    @DeleteMapping("/api/rag-chat/sessions/{sessionId}")
+    @DeleteMapping({"/api/rag-chat/sessions/{sessionId}", "/api/tutor-chat/sessions/{sessionId}"})
     public Result<Void> deleteSession(@PathVariable Long sessionId) {
         sessionService.deleteSession(sessionId);
         return Result.success(null);
@@ -98,7 +103,7 @@ public class TutorChatController {
      * 2. 返回流式响应
      * 3. 流式完成后通过回调更新消息
      */
-    @PostMapping(value = "/api/rag-chat/sessions/{sessionId}/messages/stream",
+    @PostMapping(value = {"/api/rag-chat/sessions/{sessionId}/messages/stream", "/api/tutor-chat/sessions/{sessionId}/messages/stream"},
                  produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> sendMessageStream(
             @PathVariable Long sessionId,

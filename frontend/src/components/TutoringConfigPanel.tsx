@@ -16,7 +16,7 @@ interface TutoringConfigPanelProps {
 }
 
 /**
- * 面试配置面板组件
+ * 测验配置面板组件
  */
 export default function TutoringConfigPanel({
   questionCount,
@@ -51,7 +51,7 @@ export default function TutoringConfigPanel({
           测验配置
         </h2>
         
-        {/* 未完成面试提示 */}
+        {/* 未完成测验提示 */}
         <AnimatePresence>
           {checkingUnfinished && (
             <motion.div
@@ -202,4 +202,3 @@ export default function TutoringConfigPanel({
     </motion.div>
   );
 }
-

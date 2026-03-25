@@ -86,6 +86,9 @@ app:
     follow-up-count: ${APP_TUTOR_FOLLOW_UP_COUNT:1}
     evaluation:
       batch-size: ${APP_TUTOR_EVALUATION_BATCH_SIZE:8}
+  tutoring:
+    evaluation:
+      batch-size: ${APP_TUTOR_EVALUATION_BATCH_SIZE:8}
   material:
     upload-dir: ${java.io.tmpdir}/aitutor/materials
     allowed-types:

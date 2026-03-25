@@ -26,7 +26,7 @@ function UploadPageWrapper() {
   const navigate = useNavigate();
 
   const handleUploadComplete = (studentProfileId: number) => {
-    // 异步模式：上传成功后跳转到简历库，让用户在列表中查看分析状态
+    // 异步模式：上传成功后跳转到资料库，让用户在列表中查看分析状态
     navigate('/history', { state: { newStudentProfileId: studentProfileId } });
   };
 
@@ -44,7 +44,7 @@ function HistoryListWrapper() {
   return <HistoryList onSelectStudentProfile={handleSelectStudentProfile} />;
 }
 
-// 简历详情包装器
+// 课程资料详情包装器
 function StudentProfileDetailWrapper() {
   const { studentProfileId } = useParams<{ studentProfileId: string }>();
   const navigate = useNavigate();
@@ -70,7 +70,7 @@ function StudentProfileDetailWrapper() {
   );
 }
 
-// 模拟面试包装器
+// 测验页面包装器
 function TutoringWrapper() {
   const { studentProfileId } = useParams<{ studentProfileId: string }>();
   const navigate = useNavigate();
@@ -85,14 +85,14 @@ function TutoringWrapper() {
       setStudentProfileText(stateText);
       setLoading(false);
     } else if (studentProfileId) {
-      // 如果没有，从API获取简历详情
+      // 如果没有，从API获取课程资料详情
       historyApi.getStudentProfileDetail(parseInt(studentProfileId, 10))
         .then(studentProfile => {
           setStudentProfileText(studentProfile.studentProfileText);
           setLoading(false);
         })
         .catch(err => {
-          console.error('获取简历文本失败', err);
+          console.error('获取课程资料文本失败', err);
           setLoading(false);
         });
     } else {
@@ -110,7 +110,7 @@ function TutoringWrapper() {
   };
 
   const handleTutoringComplete = () => {
-    // 面试完成后跳转到面试记录页
+    // 测验完成后跳转到测验记录页
     navigate('/tutorings');
   };
 
@@ -147,16 +147,16 @@ function App() {
             {/* 上传页面 */}
             <Route path="upload" element={<UploadPageWrapper />} />
 
-            {/* 历史记录列表（简历库） */}
+            {/* 历史记录列表（资料库） */}
             <Route path="history" element={<HistoryListWrapper />} />
 
-            {/* 简历详情 */}
+            {/* 课程资料详情 */}
             <Route path="history/:studentProfileId" element={<StudentProfileDetailWrapper />} />
 
-            {/* 面试记录列表 */}
+            {/* 测验记录列表 */}
             <Route path="tutorings" element={<TutoringHistoryWrapper />} />
 
-            {/* 模拟面试 */}
+            {/* 课后测验 */}
             <Route path="tutoring/:studentProfileId" element={<TutoringWrapper />} />
 
             {/* 课程资料管理 */}
@@ -174,7 +174,7 @@ function App() {
   );
 }
 
-// 面试记录页面包装器
+// 测验记录页面包装器
 function TutoringHistoryWrapper() {
   const navigate = useNavigate();
 
@@ -184,15 +184,15 @@ function TutoringHistoryWrapper() {
 
   const handleViewTutoring = async (sessionId: string, studentProfileId?: number) => {
     if (studentProfileId) {
-      // 如果有简历ID，跳转到简历详情页的面试详情
+      // 如果有资料ID，跳转到资料详情页的测验详情
       navigate(`/history/${studentProfileId}`, {
         state: { viewTutoring: sessionId }
       });
     } else {
-      // 否则尝试从面试详情中获取简历ID
+      // 否则尝试从测验详情中获取资料ID
       try {
         await historyApi.getTutoringDetail(sessionId);
-        // 面试详情中没有简历ID，需要从其他地方获取
+        // 测验详情中没有资料ID，需要从其他地方获取
         // 暂时跳转到历史记录列表
         navigate('/history');
       } catch {

@@ -91,7 +91,7 @@ public class CourseMaterialQueryService {
         log.debug("检索到 {} 个相关文档片段", relevantDocs.size());
 
         // 4. 构建提示词
-        String systemPrompt = buildSystemPrompt();
+        String systemPrompt = buildSystemPrompt(context);
         String userPrompt = buildUserPrompt(context, question, knowledgeBaseIds);
 
         try {
@@ -114,8 +114,10 @@ public class CourseMaterialQueryService {
     /**
      * 构建系统提示词
      */
-    private String buildSystemPrompt() {
-        return systemPromptTemplate.render();
+    private String buildSystemPrompt(String context) {
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("context", context);
+        return systemPromptTemplate.render(variables);
     }
 
     /**
@@ -175,7 +177,7 @@ public class CourseMaterialQueryService {
             log.debug("检索到 {} 个相关文档片段", relevantDocs.size());
 
             // 4. 构建提示词
-            String systemPrompt = buildSystemPrompt();
+            String systemPrompt = buildSystemPrompt(context);
             String userPrompt = buildUserPrompt(context, question, knowledgeBaseIds);
 
             // 5. 流式调用AI生成回答
@@ -201,4 +203,3 @@ public class CourseMaterialQueryService {
     }
 
 }
-

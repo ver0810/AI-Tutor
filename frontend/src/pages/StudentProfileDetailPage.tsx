@@ -42,7 +42,7 @@ export default function StudentProfileDetailPage({ studentProfileId, onBack, onS
       const data = await historyApi.getStudentProfileDetail(studentProfileId);
       setStudentProfile(data);
     } catch (err) {
-      console.error('加载简历详情失败', err);
+      console.error('加载课程资料详情失败', err);
     }
   }, [studentProfileId]);
 
@@ -52,7 +52,7 @@ export default function StudentProfileDetailPage({ studentProfileId, onBack, onS
       const data = await historyApi.getStudentProfileDetail(studentProfileId);
       setStudentProfile(data);
     } catch (err) {
-      console.error('加载简历详情失败', err);
+      console.error('加载课程资料详情失败', err);
     } finally {
       setLoading(false);
     }
@@ -93,13 +93,13 @@ export default function StudentProfileDetailPage({ studentProfileId, onBack, onS
     }
   };
 
-  // 检查是否需要自动打开面试详情
+  // 检查是否需要自动打开测验详情
   useEffect(() => {
     const viewTutoring = (location.state as { viewTutoring?: string })?.viewTutoring;
     if (viewTutoring && studentProfile) {
-      // 切换到面试标签页
+      // 切换到测验标签页
       setActiveTab('tutoring');
-      // 加载并显示面试详情
+      // 加载并显示测验详情
       const loadAndViewTutoring = async () => {
         setLoadingTutoring(true);
         try {
@@ -107,7 +107,7 @@ export default function StudentProfileDetailPage({ studentProfileId, onBack, onS
           setSelectedTutoring(detail);
           setDetailView('tutoringDetail');
         } catch (err) {
-          console.error('加载面试详情失败', err);
+          console.error('加载测验详情失败', err);
         } finally {
           setLoadingTutoring(false);
         }
@@ -161,7 +161,7 @@ export default function StudentProfileDetailPage({ studentProfileId, onBack, onS
       setSelectedTutoring(detail);
       setDetailView('tutoringDetail');
     } catch (err) {
-      alert('加载面试详情失败');
+      alert('加载测验详情失败');
     } finally {
       setLoadingTutoring(false);
     }
@@ -173,9 +173,9 @@ export default function StudentProfileDetailPage({ studentProfileId, onBack, onS
   };
 
   const handleDeleteTutoring = async (sessionId: string) => {
-    // 删除后重新加载简历详情
+    // 删除后重新加载课程资料详情
     await loadStudentProfileDetail();
-    // 如果删除的是当前查看的面试，返回列表
+    // 如果删除的是当前查看的测验，返回列表
     if (selectedTutoring?.sessionId === sessionId) {
       setDetailView('list');
       setSelectedTutoring(null);
@@ -290,7 +290,7 @@ export default function StudentProfileDetailPage({ studentProfileId, onBack, onS
         </div>
       </div>
 
-      {/* 标签页切换 - 仅在非面试详情时显示 */}
+      {/* 标签页切换 - 仅在非测验详情时显示 */}
       {detailView !== 'tutoringDetail' && (
         <div className="bg-white rounded-2xl p-2 mb-6 inline-flex gap-1">
           {tabs.map((tab) => (

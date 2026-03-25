@@ -1,7 +1,7 @@
 import { request, getErrorMessage } from './request';
 import { type CourseMaterialItem } from './courseMaterial';
 
-const API_BASE_URL = import.meta.env.PROD ? '' : 'http://localhost:8080';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
 // ========== 类型定义 ==========
 
