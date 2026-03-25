@@ -1,6 +1,6 @@
 package edu.aitutor.modules.tutoring.listener;
 
-import edu.aitutor.common.async.AbstractStreamProducer;
+import edu.aitutor.common.async.AbstractTaskPublisher;
 import edu.aitutor.common.constant.AsyncTaskStreamConstants;
 import edu.aitutor.common.model.AsyncTaskStatus;
 import edu.aitutor.infrastructure.redis.RedisService;
@@ -10,17 +10,13 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
-/**
- * 面试评估任务生产者
- * 负责发送评估任务到 Redis Stream
- */
 @Slf4j
 @Component
-public class EvaluateStreamProducer extends AbstractStreamProducer<String> {
+public class EvaluateTaskPublisher extends AbstractTaskPublisher<String> {
 
     private final TutoringSessionRepository sessionRepository;
 
-    public EvaluateStreamProducer(RedisService redisService, TutoringSessionRepository sessionRepository) {
+    public EvaluateTaskPublisher(RedisService redisService, TutoringSessionRepository sessionRepository) {
         super(redisService);
         this.sessionRepository = sessionRepository;
     }
@@ -30,8 +26,8 @@ public class EvaluateStreamProducer extends AbstractStreamProducer<String> {
      *
      * @param sessionId 面试会话ID
      */
-    public void sendEvaluateTask(String sessionId) {
-        sendTask(sessionId);
+    public void publishEvaluateTask(String sessionId) {
+        publishTask(sessionId);
     }
 
     @Override

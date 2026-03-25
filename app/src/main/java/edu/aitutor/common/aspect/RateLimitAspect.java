@@ -267,11 +267,6 @@ public class RateLimitAspect {
         return ip != null ? ip : "unknown";
     }
 
-    /**
-     * 获取当前用户 ID
-     * 从请求属性或 Session 中获取
-     * TODO: 需要根据实际项目的认证框架进行实现，本项目未显示用户管理
-     */
     private String getCurrentUserId() {
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attributes == null) {
@@ -280,23 +275,27 @@ public class RateLimitAspect {
 
         HttpServletRequest request = attributes.getRequest();
 
-        // 方式1: 从请求属性中获取（推荐）
         Object userId = request.getAttribute("userId");
-        if (userId != null) {
+        if (userId != null && !userId.toString().isBlank()) {
             return userId.toString();
         }
 
-        // 方式2: 从请求头中获取
         userId = request.getHeader("X-User-Id");
-        if (userId != null) {
+        if (userId != null && !userId.toString().isBlank()) {
             return userId.toString();
         }
 
-        // 方式3: 从 Session 中获取（如果使用 Session）
-        // userId = request.getSession().getAttribute("userId");
+        var principal = request.getUserPrincipal();
+        if (principal != null && principal.getName() != null && !principal.getName().isBlank()) {
+            return principal.getName();
+        }
 
-        // 方式4: 从 JWT Token 中解析（如果使用 JWT）
-        // 需要集成具体的 JWT 工具类
+        if (request.getSession(false) != null) {
+            Object sessionUserId = request.getSession(false).getAttribute("userId");
+            if (sessionUserId != null && !sessionUserId.toString().isBlank()) {
+                return sessionUserId.toString();
+            }
+        }
 
         return "anonymous";
     }

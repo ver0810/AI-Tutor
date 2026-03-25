@@ -58,6 +58,19 @@ export interface QueryResponse {
   knowledgeBaseName: string;
 }
 
+export interface LearningStep {
+  step: number;
+  title: string;
+  description: string;
+}
+
+export interface CourseMaterialAnalysis {
+  summary: string;
+  tags: string[];
+  learningPath: LearningStep[];
+  difficulty: number;
+}
+
 export const courseMaterialApi = {
   /**
    * 上传课程资料文件
@@ -72,6 +85,13 @@ export const courseMaterialApi = {
       formData.append('category', category);
     }
     return request.upload<UploadCourseMaterialResponse>('/api/course/materials/upload', formData);
+  },
+
+  /**
+   * 获取课程资料分析报告
+   */
+  async analyze(id: number): Promise<CourseMaterialAnalysis> {
+    return request.get<CourseMaterialAnalysis>(`/api/course/materials/${id}/analysis`);
   },
 
   /**

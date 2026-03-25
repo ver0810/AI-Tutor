@@ -7,19 +7,19 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.Map;
 
 /**
- * Redis Stream 生产者模板基类。
+ * Redis Stream 任务发布者模板基类。
  * 统一消息发送骨架与失败处理逻辑。
  */
 @Slf4j
-public abstract class AbstractStreamProducer<T> {
+public abstract class AbstractTaskPublisher<T> {
 
     private final RedisService redisService;
 
-    protected AbstractStreamProducer(RedisService redisService) {
+    protected AbstractTaskPublisher(RedisService redisService) {
         this.redisService = redisService;
     }
 
-    protected void sendTask(T payload) {
+    protected void publishTask(T payload) {
         try {
             String messageId = redisService.streamAdd(
                 streamKey(),

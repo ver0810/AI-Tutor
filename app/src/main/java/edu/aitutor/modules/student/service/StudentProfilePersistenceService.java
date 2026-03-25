@@ -3,7 +3,6 @@ package edu.aitutor.modules.student.service;
 import edu.aitutor.common.exception.BusinessException;
 import edu.aitutor.common.exception.ErrorCode;
 import edu.aitutor.infrastructure.file.FileHashService;
-import edu.aitutor.infrastructure.mapper.StudentProfileMapper;
 import edu.aitutor.modules.tutoring.model.StudentProfileAnalysisResponse;
 import edu.aitutor.modules.student.model.StudentProfileAnalysisEntity;
 import edu.aitutor.modules.student.model.StudentProfileEntity;
@@ -22,8 +21,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 简历持久化服务
- * 简历和评测结果的持久化，简历删除时删除所有关联数据
+ * 资料/简历持久化服务 (适配高校教研业务)
  */
 @Slf4j
 @Service
@@ -33,175 +31,121 @@ public class StudentProfilePersistenceService {
     private final StudentProfileRepository studentProfileRepository;
     private final StudentProfileAnalysisRepository analysisRepository;
     private final ObjectMapper objectMapper;
-    private final StudentProfileMapper studentProfileMapper;
     private final FileHashService fileHashService;
     
-    /**
-     * 检查简历是否已存在（基于文件内容hash）
-     * 
-     * @param file 上传的文件
-     * @return 如果存在返回已有的简历实体，否则返回空
-     */
     public Optional<StudentProfileEntity> findExistingStudentProfile(MultipartFile file) {
         try {
             String fileHash = fileHashService.calculateHash(file);
             Optional<StudentProfileEntity> existing = studentProfileRepository.findByFileHash(fileHash);
-            
             if (existing.isPresent()) {
-                log.info("检测到重复简历: hash={}", fileHash);
-                StudentProfileEntity studentProfile = existing.get();
-                studentProfile.incrementAccessCount();
-                studentProfileRepository.save(studentProfile);
+                StudentProfileEntity profile = existing.get();
+                profile.incrementAccessCount();
+                studentProfileRepository.save(profile);
             }
-            
             return existing;
         } catch (Exception e) {
-            log.error("检查简历重复时出错: {}", e.getMessage());
+            log.error("检查重复失败", e);
             return Optional.empty();
         }
     }
     
-    /**
-     * 保存新简历
-     */
     @Transactional(rollbackFor = Exception.class)
-    public StudentProfileEntity saveStudentProfile(MultipartFile file, String studentProfileText,
-                                   String storageKey, String storageUrl) {
+    public StudentProfileEntity saveStudentProfile(MultipartFile file, String text, String key, String url) {
         try {
-            String fileHash = fileHashService.calculateHash(file);
-            
-            StudentProfileEntity studentProfile = new StudentProfileEntity();
-            studentProfile.setFileHash(fileHash);
-            studentProfile.setOriginalFilename(file.getOriginalFilename());
-            studentProfile.setFileSize(file.getSize());
-            studentProfile.setContentType(file.getContentType());
-            studentProfile.setStorageKey(storageKey);
-            studentProfile.setStorageUrl(storageUrl);
-            studentProfile.setStudentProfileText(studentProfileText);
-            
-            StudentProfileEntity saved = studentProfileRepository.save(studentProfile);
-            log.info("简历已保存: id={}, hash={}", saved.getId(), fileHash);
-            
-            return saved;
+            StudentProfileEntity profile = new StudentProfileEntity();
+            profile.setFileHash(fileHashService.calculateHash(file));
+            profile.setOriginalFilename(file.getOriginalFilename());
+            profile.setFileSize(file.getSize());
+            profile.setContentType(file.getContentType());
+            profile.setStorageKey(key);
+            profile.setStorageUrl(url);
+            profile.setStudentProfileText(text);
+            return studentProfileRepository.save(profile);
         } catch (Exception e) {
-            log.error("保存简历失败: {}", e.getMessage(), e);
-            throw new BusinessException(ErrorCode.STUDENT_PROFILE_UPLOAD_FAILED, "保存简历失败");
+            throw new BusinessException(ErrorCode.STUDENT_PROFILE_UPLOAD_FAILED, "保存资料失败");
         }
     }
     
-    /**
-     * 保存简历评测结果
-     */
     @Transactional(rollbackFor = Exception.class)
-    public StudentProfileAnalysisEntity saveAnalysis(StudentProfileEntity studentProfile, StudentProfileAnalysisResponse analysis) {
+    public StudentProfileAnalysisEntity saveAnalysis(StudentProfileEntity profile, StudentProfileAnalysisResponse analysis) {
         try {
-            // 使用 MapStruct 映射基础字段
-            StudentProfileAnalysisEntity entity = studentProfileMapper.toAnalysisEntity(analysis);
-            entity.setStudentProfile(studentProfile);
+            StudentProfileAnalysisEntity entity = new StudentProfileAnalysisEntity();
+            entity.setStudentProfile(profile);
+            entity.setOverallScore(analysis.overallScore());
+            entity.setDifficulty(analysis.difficulty());
+            entity.setSummary(analysis.summary());
+            
+            // 序列化 JSON 字段
+            entity.setTagsJson(objectMapper.writeValueAsString(analysis.tags()));
+            entity.setLearningPathJson(objectMapper.writeValueAsString(analysis.learningPath()));
 
-            // JSON 字段需要手动序列化
-            entity.setStrengthsJson(objectMapper.writeValueAsString(analysis.strengths()));
-            entity.setSuggestionsJson(objectMapper.writeValueAsString(analysis.suggestions()));
-
-            StudentProfileAnalysisEntity saved = analysisRepository.save(entity);
-            log.info("简历评测结果已保存: analysisId={}, studentProfileId={}, score={}",
-                    saved.getId(), studentProfile.getId(), analysis.overallScore());
-
-            return saved;
+            return analysisRepository.save(entity);
         } catch (JacksonException e) {
-            log.error("序列化评测结果失败: {}", e.getMessage(), e);
-            throw new BusinessException(ErrorCode.STUDENT_PROFILE_ANALYSIS_FAILED, "保存评测结果失败");
+            log.error("分析结果序列化失败", e);
+            throw new BusinessException(ErrorCode.STUDENT_PROFILE_ANALYSIS_FAILED, "序列化失败");
         }
     }
-    
+
     /**
-     * 获取简历的最新评测结果
+     * 获取最新分析实体
      */
-    public Optional<StudentProfileAnalysisEntity> getLatestAnalysis(Long studentProfileId) {
-        return Optional.ofNullable(analysisRepository.findFirstByStudentProfileIdOrderByAnalyzedAtDesc(studentProfileId));
+    public Optional<StudentProfileAnalysisEntity> getLatestAnalysis(Long profileId) {
+        return Optional.ofNullable(analysisRepository.findFirstByStudentProfileIdOrderByAnalyzedAtDesc(profileId));
     }
-    
+
     /**
-     * 获取简历的最新评测结果（返回DTO）
+     * 获取历史分析列表
      */
-    public Optional<StudentProfileAnalysisResponse> getLatestAnalysisAsDTO(Long studentProfileId) {
-        return getLatestAnalysis(studentProfileId).map(this::entityToDTO);
+    public List<StudentProfileAnalysisEntity> findAnalysesByStudentProfileId(Long profileId) {
+        return analysisRepository.findByStudentProfileIdOrderByAnalyzedAtDesc(profileId);
     }
-    
+
     /**
-     * 获取所有简历列表
+     * 获取所有资料实体
      */
     public List<StudentProfileEntity> findAllStudentProfiles() {
         return studentProfileRepository.findAll();
     }
     
-    /**
-     * 获取简历的所有评测记录
-     */
-    public List<StudentProfileAnalysisEntity> findAnalysesByStudentProfileId(Long studentProfileId) {
-        return analysisRepository.findByStudentProfileIdOrderByAnalyzedAtDesc(studentProfileId);
+    public Optional<StudentProfileAnalysisResponse> getLatestAnalysisAsDTO(Long profileId) {
+        return getLatestAnalysis(profileId).map(this::entityToDTO);
     }
     
-    /**
-     * 将实体转换为DTO
-     */
     public StudentProfileAnalysisResponse entityToDTO(StudentProfileAnalysisEntity entity) {
         try {
-            List<String> strengths = objectMapper.readValue(
-                entity.getStrengthsJson() != null ? entity.getStrengthsJson() : "[]",
-                    new TypeReference<>() {
-                    }
+            List<String> tags = objectMapper.readValue(
+                entity.getTagsJson() != null ? entity.getTagsJson() : "[]",
+                new TypeReference<List<String>>() {}
             );
             
-            List<StudentProfileAnalysisResponse.Suggestion> suggestions = objectMapper.readValue(
-                entity.getSuggestionsJson() != null ? entity.getSuggestionsJson() : "[]",
-                    new TypeReference<>() {
-                    }
+            List<StudentProfileAnalysisResponse.LearningStep> path = objectMapper.readValue(
+                entity.getLearningPathJson() != null ? entity.getLearningPathJson() : "[]",
+                new TypeReference<List<StudentProfileAnalysisResponse.LearningStep>>() {}
             );
             
             return new StudentProfileAnalysisResponse(
-                entity.getOverallScore(),
-                studentProfileMapper.toScoreDetail(entity),  // 使用MapStruct自动映射
                 entity.getSummary(),
-                strengths,
-                suggestions,
+                tags,
+                path,
+                entity.getOverallScore(),
+                entity.getDifficulty(),
                 entity.getStudentProfile().getStudentProfileText()
             );
         } catch (JacksonException e) {
-            log.error("反序列化评测结果失败: {}", e.getMessage());
-            throw new BusinessException(ErrorCode.STUDENT_PROFILE_ANALYSIS_FAILED, "获取评测结果失败");
+            log.error("分析结果反序列化失败", e);
+            throw new BusinessException(ErrorCode.STUDENT_PROFILE_ANALYSIS_FAILED, "获取分析结果失败");
         }
     }
     
-    /**
-     * 根据ID获取简历
-     */
     public Optional<StudentProfileEntity> findById(Long id) {
         return studentProfileRepository.findById(id);
     }
-    
-    /**
-     * 删除简历及其所有关联数据
-     * 包括：简历分析记录、面试会话（会自动删除面试答案）
-     */
+
     @Transactional(rollbackFor = Exception.class)
     public void deleteStudentProfile(Long id) {
-        Optional<StudentProfileEntity> studentProfileOpt = studentProfileRepository.findById(id);
-        if (studentProfileOpt.isEmpty()) {
-            throw new BusinessException(ErrorCode.STUDENT_PROFILE_NOT_FOUND);
-        }
-        
-        StudentProfileEntity studentProfile = studentProfileOpt.get();
-        
-        // 1. 删除所有简历分析记录
-        List<StudentProfileAnalysisEntity> analyses = analysisRepository.findByStudentProfileIdOrderByAnalyzedAtDesc(id);
-        if (!analyses.isEmpty()) {
-            analysisRepository.deleteAll(analyses);
-            log.info("已删除 {} 条简历分析记录", analyses.size());
-        }
-        
-        // 2. 删除简历实体（面试会话会在服务层删除）
-        studentProfileRepository.delete(studentProfile);
-        log.info("简历已删除: id={}, filename={}", id, studentProfile.getOriginalFilename());
+        studentProfileRepository.findById(id).ifPresent(p -> {
+            analysisRepository.deleteAll(analysisRepository.findByStudentProfileIdOrderByAnalyzedAtDesc(id));
+            studentProfileRepository.delete(p);
+        });
     }
 }

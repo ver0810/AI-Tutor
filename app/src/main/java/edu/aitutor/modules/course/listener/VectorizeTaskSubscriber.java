@@ -1,6 +1,6 @@
 package edu.aitutor.modules.course.listener;
 
-import edu.aitutor.common.async.AbstractStreamConsumer;
+import edu.aitutor.common.async.AbstractTaskSubscriber;
 import edu.aitutor.common.constant.AsyncTaskStreamConstants;
 import edu.aitutor.infrastructure.redis.RedisService;
 import edu.aitutor.modules.course.model.MaterialVectorStatus;
@@ -12,18 +12,14 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
-/**
- * 知识库向量化 Stream 消费者
- * 负责从 Redis Stream 消费消息并执行向量化
- */
 @Slf4j
 @Component
-public class VectorizeStreamConsumer extends AbstractStreamConsumer<VectorizeStreamConsumer.VectorizePayload> {
+public class VectorizeTaskSubscriber extends AbstractTaskSubscriber<VectorizeTaskSubscriber.VectorizePayload> {
 
     private final CourseMaterialVectorService vectorService;
     private final CourseMaterialRepository knowledgeBaseRepository;
 
-    public VectorizeStreamConsumer(
+    public VectorizeTaskSubscriber(
         RedisService redisService,
         CourseMaterialVectorService vectorService,
         CourseMaterialRepository knowledgeBaseRepository
@@ -51,13 +47,13 @@ public class VectorizeStreamConsumer extends AbstractStreamConsumer<VectorizeStr
     }
 
     @Override
-    protected String consumerPrefix() {
-        return AsyncTaskStreamConstants.KB_VECTORIZE_CONSUMER_PREFIX;
+    protected String subscriberPrefix() {
+        return AsyncTaskStreamConstants.KB_VECTORIZE_SUBSCRIBER_PREFIX;
     }
 
     @Override
     protected String threadName() {
-        return "vectorize-consumer";
+        return "vectorize-subscriber";
     }
 
     @Override

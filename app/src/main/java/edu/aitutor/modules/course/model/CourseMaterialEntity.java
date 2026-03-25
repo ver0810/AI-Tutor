@@ -51,6 +51,11 @@ public class CourseMaterialEntity {
     // RustFS存储的文件URL
     @Column(length = 1000)
     private String storageUrl;
+
+    // 提取的纯文本内容（用于 AI 分析和检索）
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String content;
     
     // 上传时间
     @Column(nullable = false)
@@ -156,7 +161,15 @@ public class CourseMaterialEntity {
     public void setStorageUrl(String storageUrl) {
         this.storageUrl = storageUrl;
     }
-    
+
+    public String getContent() {
+        return content;
+    }
+
+    public void setContent(String content) {
+        this.content = content;
+    }
+
     public LocalDateTime getUploadedAt() {
         return uploadedAt;
     }

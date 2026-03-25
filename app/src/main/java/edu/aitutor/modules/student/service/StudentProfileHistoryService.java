@@ -22,8 +22,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 简历历史服务
- * 简历历史和导出简历分析报告
+ * 资料分析历史服务
  */
 @Slf4j
 @Service
@@ -31,151 +30,126 @@ import java.util.Optional;
 public class StudentProfileHistoryService {
 
     private final StudentProfilePersistenceService studentProfilePersistenceService;
-    private final TutoringPersistenceService aitutorPersistenceService;
+    private final TutoringPersistenceService tutoringPersistenceService;
     private final PdfExportService pdfExportService;
     private final ObjectMapper objectMapper;
     private final StudentProfileMapper studentProfileMapper;
-    private final TutoringMapper aitutorMapper;
+    private final TutoringMapper tutoringMapper;
 
     /**
-     * 获取所有简历列表
+     * 获取资料列表
      */
     public List<StudentProfileListItemDTO> getAllStudentProfiles() {
-        List<StudentProfileEntity> studentProfiles = studentProfilePersistenceService.findAllStudentProfiles();
+        List<StudentProfileEntity> profiles = studentProfilePersistenceService.findAllStudentProfiles();
 
-        return studentProfiles.stream().map(studentProfile -> {
-            // 获取最新分析结果的分数
+        return profiles.stream().map(profile -> {
             Integer latestScore = null;
             java.time.LocalDateTime lastAnalyzedAt = null;
-            Optional<StudentProfileAnalysisEntity> analysisOpt = studentProfilePersistenceService.getLatestAnalysis(studentProfile.getId());
+            Optional<StudentProfileAnalysisEntity> analysisOpt = studentProfilePersistenceService.getLatestAnalysis(profile.getId());
             if (analysisOpt.isPresent()) {
-                StudentProfileAnalysisEntity analysis = analysisOpt.get();
-                latestScore = analysis.getOverallScore();
-                lastAnalyzedAt = analysis.getAnalyzedAt();
+                latestScore = analysisOpt.get().getOverallScore();
+                lastAnalyzedAt = analysisOpt.get().getAnalyzedAt();
             }
 
-            // 获取面试次数
-            int aitutorCount = aitutorPersistenceService.findByStudentProfileId(studentProfile.getId()).size();
+            int count = tutoringPersistenceService.findByStudentProfileId(profile.getId()).size();
 
-            // 使用 MapStruct 映射
             return new StudentProfileListItemDTO(
-                studentProfile.getId(),
-                studentProfile.getOriginalFilename(),
-                studentProfile.getFileSize(),
-                studentProfile.getUploadedAt(),
-                studentProfile.getAccessCount(),
+                profile.getId(),
+                profile.getOriginalFilename(),
+                profile.getFileSize(),
+                profile.getUploadedAt(),
+                profile.getAccessCount(),
                 latestScore,
                 lastAnalyzedAt,
-                aitutorCount
+                count
             );
         }).toList();
     }
 
     /**
-     * 获取简历详情（包含分析历史）
+     * 获取资料详情
      */
     public StudentProfileDetailDTO getStudentProfileDetail(Long id) {
-        Optional<StudentProfileEntity> studentProfileOpt = studentProfilePersistenceService.findById(id);
-        if (studentProfileOpt.isEmpty()) {
-            throw new BusinessException(ErrorCode.STUDENT_PROFILE_NOT_FOUND);
-        }
+        StudentProfileEntity profile = studentProfilePersistenceService.findById(id)
+            .orElseThrow(() -> new BusinessException(ErrorCode.STUDENT_PROFILE_NOT_FOUND));
 
-        StudentProfileEntity studentProfile = studentProfileOpt.get();
-
-        // 获取所有分析记录，使用 MapStruct 批量转换
         List<StudentProfileAnalysisEntity> analyses = studentProfilePersistenceService.findAnalysesByStudentProfileId(id);
-        List<StudentProfileDetailDTO.AnalysisHistoryDTO> analysisHistory = studentProfileMapper.toAnalysisHistoryDTOList(
-            analyses,
-            this::extractStrengths,
-            this::extractSuggestions
-        );
+        
+        List<StudentProfileDetailDTO.AnalysisHistoryDTO> analysisHistory = analyses.stream()
+            .map(entity -> {
+                List<String> tags = extractTags(entity);
+                List<StudentProfileAnalysisResponse.LearningStep> path = extractLearningPath(entity);
+                return new StudentProfileDetailDTO.AnalysisHistoryDTO(
+                    entity.getId(),
+                    entity.getOverallScore(),
+                    entity.getDifficulty(),
+                    entity.getSummary(),
+                    tags,
+                    path,
+                    entity.getAnalyzedAt()
+                );
+            }).toList();
 
-        // 使用 TutoringMapper 转换面试历史
-        List<Object> aitutorHistory = aitutorMapper.toAitutorHistoryList(
-            aitutorPersistenceService.findByStudentProfileId(id)
+        List<Object> tutoringHistory = tutoringMapper.toAitutorHistoryList(
+            tutoringPersistenceService.findByStudentProfileId(id)
         );
 
         return new StudentProfileDetailDTO(
-            studentProfile.getId(),
-            studentProfile.getOriginalFilename(),
-            studentProfile.getFileSize(),
-            studentProfile.getContentType(),
-            studentProfile.getStorageUrl(),
-            studentProfile.getUploadedAt(),
-            studentProfile.getAccessCount(),
-            studentProfile.getStudentProfileText(),
-            studentProfile.getAnalyzeStatus(),
-            studentProfile.getAnalyzeError(),
+            profile.getId(),
+            profile.getOriginalFilename(),
+            profile.getFileSize(),
+            profile.getContentType(),
+            profile.getStorageUrl(),
+            profile.getUploadedAt(),
+            profile.getAccessCount(),
+            profile.getStudentProfileText(),
+            profile.getAnalyzeStatus(),
+            profile.getAnalyzeError(),
             analysisHistory,
-            aitutorHistory
+            tutoringHistory
         );
     }
 
-    /**
-     * 从 JSON 提取 strengths
-     */
-    private List<String> extractStrengths(StudentProfileAnalysisEntity entity) {
+    private List<String> extractTags(StudentProfileAnalysisEntity entity) {
         try {
-            if (entity.getStrengthsJson() != null) {
-                return objectMapper.readValue(
-                    entity.getStrengthsJson(),
-                        new TypeReference<>() {
-                        }
-                );
+            if (entity.getTagsJson() != null) {
+                return objectMapper.readValue(entity.getTagsJson(), new TypeReference<List<String>>() {});
             }
         } catch (JacksonException e) {
-            log.error("解析 strengths JSON 失败", e);
+            log.error("解析 tags 失败", e);
+        }
+        return List.of();
+    }
+
+    private List<StudentProfileAnalysisResponse.LearningStep> extractLearningPath(StudentProfileAnalysisEntity entity) {
+        try {
+            if (entity.getLearningPathJson() != null) {
+                return objectMapper.readValue(entity.getLearningPathJson(), new TypeReference<List<StudentProfileAnalysisResponse.LearningStep>>() {});
+            }
+        } catch (JacksonException e) {
+            log.error("解析 learningPath 失败", e);
         }
         return List.of();
     }
 
     /**
-     * 从 JSON 提取 suggestions
+     * 导出分析报告 PDF
      */
-    private List<Object> extractSuggestions(StudentProfileAnalysisEntity entity) {
-        try {
-            if (entity.getSuggestionsJson() != null) {
-                return objectMapper.readValue(
-                    entity.getSuggestionsJson(),
-                        new TypeReference<>() {
-                        }
-                );
-            }
-        } catch (JacksonException e) {
-            log.error("解析 suggestions JSON 失败", e);
-        }
-        return List.of();
-    }
+    public ExportResult exportAnalysisPdf(Long id) {
+        StudentProfileEntity profile = studentProfilePersistenceService.findById(id)
+            .orElseThrow(() -> new BusinessException(ErrorCode.STUDENT_PROFILE_NOT_FOUND));
 
-    /**
-     * 导出简历分析报告为PDF
-     */
-    public ExportResult exportAnalysisPdf(Long studentProfileId) {
-        Optional<StudentProfileEntity> studentProfileOpt = studentProfilePersistenceService.findById(studentProfileId);
-        if (studentProfileOpt.isEmpty()) {
-            throw new BusinessException(ErrorCode.STUDENT_PROFILE_NOT_FOUND);
-        }
-
-        StudentProfileEntity studentProfile = studentProfileOpt.get();
-        Optional<StudentProfileAnalysisResponse> analysisOpt = studentProfilePersistenceService.getLatestAnalysisAsDTO(studentProfileId);
-        if (analysisOpt.isEmpty()) {
-            throw new BusinessException(ErrorCode.STUDENT_PROFILE_ANALYSIS_NOT_FOUND);
-        }
+        StudentProfileAnalysisResponse analysis = studentProfilePersistenceService.getLatestAnalysisAsDTO(id)
+            .orElseThrow(() -> new BusinessException(ErrorCode.STUDENT_PROFILE_ANALYSIS_NOT_FOUND));
 
         try {
-            byte[] pdfBytes = pdfExportService.exportStudentProfileAnalysis(studentProfile, analysisOpt.get());
-            String filename = "简历分析报告_" + studentProfile.getOriginalFilename() + ".pdf";
-
+            byte[] pdfBytes = pdfExportService.exportStudentProfileAnalysis(profile, analysis);
+            String filename = "资料分析报告_" + profile.getOriginalFilename() + ".pdf";
             return new ExportResult(pdfBytes, filename);
         } catch (Exception e) {
-            log.error("导出PDF失败: studentProfileId={}", studentProfileId, e);
-            throw new BusinessException(ErrorCode.EXPORT_PDF_FAILED, "导出PDF失败: " + e.getMessage());
+            throw new BusinessException(ErrorCode.EXPORT_PDF_FAILED, "导出PDF失败");
         }
     }
 
-    /**
-     * PDF导出结果
-     */
     public record ExportResult(byte[] pdfBytes, String filename) {}
 }
-

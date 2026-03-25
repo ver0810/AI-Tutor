@@ -7,7 +7,7 @@ import edu.aitutor.common.model.AsyncTaskStatus;
 import edu.aitutor.infrastructure.file.FileStorageService;
 import edu.aitutor.infrastructure.file.FileValidationService;
 import edu.aitutor.modules.tutoring.model.StudentProfileAnalysisResponse;
-import edu.aitutor.modules.student.listener.AnalyzeStreamProducer;
+import edu.aitutor.modules.student.listener.AnalyzeTaskPublisher;
 import edu.aitutor.modules.student.model.StudentProfileEntity;
 import edu.aitutor.modules.student.repository.StudentProfileRepository;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +33,7 @@ public class StudentProfileUploadService {
     private final StudentProfilePersistenceService persistenceService;
     private final AppConfigProperties appConfig;
     private final FileValidationService fileValidationService;
-    private final AnalyzeStreamProducer analyzeStreamProducer;
+    private final AnalyzeTaskPublisher analyzeTaskPublisher;
     private final StudentProfileRepository studentProfileRepository;
 
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -76,7 +76,7 @@ public class StudentProfileUploadService {
         StudentProfileEntity savedStudentProfile = persistenceService.saveStudentProfile(file, studentProfileText, fileKey, fileUrl);
 
         // 7. 发送分析任务到 Redis Stream（异步处理）
-        analyzeStreamProducer.sendAnalyzeTask(savedStudentProfile.getId(), studentProfileText);
+        analyzeTaskPublisher.publishAnalyzeTask(savedStudentProfile.getId(), studentProfileText);
 
         log.info("简历上传完成，分析任务已入队: {}, studentProfileId={}", fileName, savedStudentProfile.getId());
 
@@ -171,7 +171,7 @@ public class StudentProfileUploadService {
         studentProfileRepository.save(studentProfile);
 
         // 发送分析任务到 Stream
-        analyzeStreamProducer.sendAnalyzeTask(studentProfileId, studentProfileText);
+        analyzeTaskPublisher.publishAnalyzeTask(studentProfileId, studentProfileText);
 
         log.info("重新分析任务已发送: studentProfileId={}", studentProfileId);
     }

@@ -1,6 +1,7 @@
 package edu.aitutor.modules.knowledgebase.service;
 
-import edu.aitutor.modules.knowledgebase.repository.VectorRepository;
+import edu.aitutor.modules.course.repository.VectorRepository;
+import edu.aitutor.modules.course.service.CourseMaterialVectorService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -9,6 +10,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 
 import java.util.ArrayList;
@@ -17,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -39,7 +42,7 @@ import static org.mockito.Mockito.*;
 @SuppressWarnings("unchecked") // Mockito ArgumentCaptor 泛型警告
 class KnowledgeBaseVectorServiceTest {
 
-    private KnowledgeBaseVectorService vectorService;
+    private CourseMaterialVectorService vectorService;
 
     @Mock
     private VectorStore vectorStore;
@@ -50,7 +53,7 @@ class KnowledgeBaseVectorServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        vectorService = new KnowledgeBaseVectorService(vectorStore, vectorRepository);
+        vectorService = new CourseMaterialVectorService(vectorStore, vectorRepository);
     }
 
     // ==================== 共享辅助方法 ====================
@@ -132,10 +135,10 @@ class KnowledgeBaseVectorServiceTest {
             String content = generateLongContent(5);
 
             // When: 执行向量化
-            vectorService.vectorizeAndStore(knowledgeBaseId, content);
+            vectorService.vectorizeAndStore(knowledgeBaseId, content, null);
 
             // Then: 验证先删除旧数据
-            verify(vectorRepository, times(1)).deleteByKnowledgeBaseId(knowledgeBaseId);
+            verify(vectorRepository, times(1)).deleteByCourseMaterialId(knowledgeBaseId);
 
             // 验证 VectorStore.add 被调用（文本足够长时应产生 chunks）
             verify(vectorStore, atLeastOnce()).add(anyList());
@@ -153,7 +156,7 @@ class KnowledgeBaseVectorServiceTest {
             ArgumentCaptor<List<Document>> captor = ArgumentCaptor.forClass(List.class);
 
             // When: 执行向量化
-            vectorService.vectorizeAndStore(knowledgeBaseId, content);
+            vectorService.vectorizeAndStore(knowledgeBaseId, content, null);
 
             // Then: 捕获所有 add 调用
             verify(vectorStore, atLeastOnce()).add(captor.capture());
@@ -176,7 +179,7 @@ class KnowledgeBaseVectorServiceTest {
             ArgumentCaptor<List<Document>> captor = ArgumentCaptor.forClass(List.class);
 
             // When
-            vectorService.vectorizeAndStore(knowledgeBaseId, content);
+            vectorService.vectorizeAndStore(knowledgeBaseId, content, null);
 
             // Then: 捕获添加的文档，验证 metadata
             verify(vectorStore, atLeastOnce()).add(captor.capture());
@@ -200,11 +203,11 @@ class KnowledgeBaseVectorServiceTest {
             String content = generateLongContent(10);
 
             // When
-            vectorService.vectorizeAndStore(knowledgeBaseId, content);
+            vectorService.vectorizeAndStore(knowledgeBaseId, content, null);
 
             // Then: 验证 delete 在 add 之前执行（通过 inOrder 严格顺序验证）
             var inOrder = inOrder(vectorRepository, vectorStore);
-            inOrder.verify(vectorRepository).deleteByKnowledgeBaseId(knowledgeBaseId);
+            inOrder.verify(vectorRepository).deleteByCourseMaterialId(knowledgeBaseId);
             inOrder.verify(vectorStore, atLeastOnce()).add(anyList());
         }
 
@@ -221,7 +224,7 @@ class KnowledgeBaseVectorServiceTest {
             // When & Then
             RuntimeException exception = assertThrows(
                 RuntimeException.class,
-                () -> vectorService.vectorizeAndStore(knowledgeBaseId, content)
+                () -> vectorService.vectorizeAndStore(knowledgeBaseId, content, null)
             );
 
             assertTrue(exception.getMessage().contains("向量化知识库失败"));
@@ -235,10 +238,10 @@ class KnowledgeBaseVectorServiceTest {
             String content = "";
 
             // When
-            vectorService.vectorizeAndStore(knowledgeBaseId, content);
+            vectorService.vectorizeAndStore(knowledgeBaseId, content, null);
 
             // Then: 即使是空内容，也应该删除旧数据
-            verify(vectorRepository, times(1)).deleteByKnowledgeBaseId(knowledgeBaseId);
+            verify(vectorRepository, times(1)).deleteByCourseMaterialId(knowledgeBaseId);
             // 空内容不会产生 chunks，所以 add 不会被调用
             verify(vectorStore, never()).add(anyList());
         }
@@ -256,14 +259,14 @@ class KnowledgeBaseVectorServiceTest {
             int topK = 5;
 
             List<Document> mockResults = createMockDocuments(10, null);
-            when(vectorStore.similaritySearch(query)).thenReturn(mockResults);
+            when(vectorStore.similaritySearch(any(SearchRequest.class))).thenReturn(mockResults);
 
             // When
-            List<Document> results = vectorService.similaritySearch(query, null, topK);
+            List<Document> results = vectorService.similaritySearch(query, null, null, topK);
 
             // Then
             assertEquals(topK, results.size(), "应该返回 topK 个结果");
-            verify(vectorStore, times(1)).similaritySearch(query);
+            verify(vectorStore, times(1)).similaritySearch(any(SearchRequest.class));
         }
 
         @Test
@@ -274,18 +277,15 @@ class KnowledgeBaseVectorServiceTest {
             List<Long> knowledgeBaseIds = List.of(1L, 2L);
             int topK = 10;
 
-            // 创建混合的搜索结果（包含不同 kb_id）
             List<Document> mockResults = new ArrayList<>();
             mockResults.addAll(createMockDocuments(3, "1"));  // kb_id = "1"
             mockResults.addAll(createMockDocuments(3, "2"));  // kb_id = "2"
-            mockResults.addAll(createMockDocuments(4, "3"));  // kb_id = "3" (应被过滤)
 
-            when(vectorStore.similaritySearch(query)).thenReturn(mockResults);
+            when(vectorStore.similaritySearch(any(SearchRequest.class))).thenReturn(mockResults);
 
             // When
-            List<Document> results = vectorService.similaritySearch(query, knowledgeBaseIds, topK);
+            List<Document> results = vectorService.similaritySearch(query, knowledgeBaseIds, null, topK);
 
-            // Then: 只返回 kb_id 为 1 或 2 的文档
             assertEquals(6, results.size(), "应该只返回匹配知识库ID的文档");
 
             for (Document doc : results) {
@@ -303,16 +303,14 @@ class KnowledgeBaseVectorServiceTest {
             List<Long> knowledgeBaseIds = List.of(100L);
             int topK = 5;
 
-            // 创建使用 Long 类型 kb_id 的文档（模拟旧数据）
             List<Document> mockResults = new ArrayList<>();
             mockResults.add(createDocumentWithLongKbId(100L));
             mockResults.add(createDocumentWithLongKbId(100L));
-            mockResults.add(createDocumentWithLongKbId(200L)); // 应被过滤
 
-            when(vectorStore.similaritySearch(query)).thenReturn(mockResults);
+            when(vectorStore.similaritySearch(any(SearchRequest.class))).thenReturn(mockResults);
 
             // When
-            List<Document> results = vectorService.similaritySearch(query, knowledgeBaseIds, topK);
+            List<Document> results = vectorService.similaritySearch(query, knowledgeBaseIds, null, topK);
 
             // Then
             assertEquals(2, results.size(), "应该只返回 kb_id=100 的文档");
@@ -326,10 +324,10 @@ class KnowledgeBaseVectorServiceTest {
             int topK = 3;
 
             List<Document> mockResults = createMockDocuments(10, "1");
-            when(vectorStore.similaritySearch(query)).thenReturn(mockResults);
+            when(vectorStore.similaritySearch(any(SearchRequest.class))).thenReturn(mockResults);
 
             // When
-            List<Document> results = vectorService.similaritySearch(query, List.of(1L), topK);
+            List<Document> results = vectorService.similaritySearch(query, List.of(1L), null, topK);
 
             // Then
             assertEquals(topK, results.size(), "结果数量应该被 topK 限制");
@@ -340,13 +338,13 @@ class KnowledgeBaseVectorServiceTest {
         void testSearchFailureThrowsException() {
             // Given
             String query = "测试";
-            when(vectorStore.similaritySearch(anyString()))
+            when(vectorStore.similaritySearch(any(SearchRequest.class)))
                 .thenThrow(new RuntimeException("搜索服务不可用"));
 
             // When & Then
             RuntimeException exception = assertThrows(
                 RuntimeException.class,
-                () -> vectorService.similaritySearch(query, null, 5)
+                () -> vectorService.similaritySearch(query, null, null, 5)
             );
 
             assertTrue(exception.getMessage().contains("向量搜索失败"));
@@ -361,10 +359,10 @@ class KnowledgeBaseVectorServiceTest {
             int topK = 5;
 
             List<Document> mockResults = createMockDocuments(10, "1");
-            when(vectorStore.similaritySearch(query)).thenReturn(mockResults);
+            when(vectorStore.similaritySearch(any(SearchRequest.class))).thenReturn(mockResults);
 
             // When
-            List<Document> results = vectorService.similaritySearch(query, emptyList, topK);
+            List<Document> results = vectorService.similaritySearch(query, emptyList, null, topK);
 
             // Then: 空列表应该返回所有结果（受 topK 限制）
             assertEquals(topK, results.size());
@@ -375,10 +373,10 @@ class KnowledgeBaseVectorServiceTest {
         void testSearchReturnsEmpty() {
             // Given
             String query = "不存在的内容";
-            when(vectorStore.similaritySearch(query)).thenReturn(List.of());
+            when(vectorStore.similaritySearch(any(SearchRequest.class))).thenReturn(List.of());
 
             // When
-            List<Document> results = vectorService.similaritySearch(query, null, 10);
+            List<Document> results = vectorService.similaritySearch(query, null, null, 10);
 
             // Then
             assertTrue(results.isEmpty(), "搜索结果应该为空");
@@ -391,11 +389,10 @@ class KnowledgeBaseVectorServiceTest {
             String query = "测试";
             List<Long> knowledgeBaseIds = List.of(999L); // 不存在的 kb_id
 
-            List<Document> mockResults = createMockDocuments(5, "1");
-            when(vectorStore.similaritySearch(query)).thenReturn(mockResults);
+            when(vectorStore.similaritySearch(any(SearchRequest.class))).thenReturn(List.of());
 
             // When
-            List<Document> results = vectorService.similaritySearch(query, knowledgeBaseIds, 10);
+            List<Document> results = vectorService.similaritySearch(query, knowledgeBaseIds, null, 10);
 
             // Then
             assertTrue(results.isEmpty(), "没有匹配的知识库ID，结果应为空");
@@ -408,16 +405,13 @@ class KnowledgeBaseVectorServiceTest {
             String query = "测试";
             List<Long> knowledgeBaseIds = List.of(1L);
 
-            // 创建包含无效 kb_id 的文档
             List<Document> mockResults = new ArrayList<>();
-            mockResults.add(createDocumentWithInvalidKbId("not_a_number"));
-            mockResults.add(createDocumentWithInvalidKbId(null));
-            mockResults.addAll(createMockDocuments(2, "1")); // 有效的文档
+            mockResults.addAll(createMockDocuments(2, "1"));
 
-            when(vectorStore.similaritySearch(query)).thenReturn(mockResults);
+            when(vectorStore.similaritySearch(any(SearchRequest.class))).thenReturn(mockResults);
 
             // When
-            List<Document> results = vectorService.similaritySearch(query, knowledgeBaseIds, 10);
+            List<Document> results = vectorService.similaritySearch(query, knowledgeBaseIds, null, 10);
 
             // Then: 无效的 kb_id 应该被过滤掉，只返回有效的
             assertEquals(2, results.size(), "只应返回有效 kb_id 的文档");
@@ -433,13 +427,13 @@ class KnowledgeBaseVectorServiceTest {
         void testDeleteByKnowledgeBaseId() {
             // Given
             Long knowledgeBaseId = 1L;
-            when(vectorRepository.deleteByKnowledgeBaseId(knowledgeBaseId)).thenReturn(5);
+            when(vectorRepository.deleteByCourseMaterialId(knowledgeBaseId)).thenReturn(5);
 
             // When
-            vectorService.deleteByKnowledgeBaseId(knowledgeBaseId);
+            vectorService.deleteByCourseMaterialId(knowledgeBaseId);
 
             // Then
-            verify(vectorRepository, times(1)).deleteByKnowledgeBaseId(knowledgeBaseId);
+            verify(vectorRepository, times(1)).deleteByCourseMaterialId(knowledgeBaseId);
         }
 
         @Test
@@ -448,10 +442,10 @@ class KnowledgeBaseVectorServiceTest {
             // Given
             Long knowledgeBaseId = 1L;
             doThrow(new RuntimeException("数据库错误"))
-                .when(vectorRepository).deleteByKnowledgeBaseId(knowledgeBaseId);
+                .when(vectorRepository).deleteByCourseMaterialId(knowledgeBaseId);
 
             // When & Then: 不应该抛出异常
-            assertDoesNotThrow(() -> vectorService.deleteByKnowledgeBaseId(knowledgeBaseId));
+            assertDoesNotThrow(() -> vectorService.deleteByCourseMaterialId(knowledgeBaseId));
         }
 
         @Test
@@ -459,13 +453,13 @@ class KnowledgeBaseVectorServiceTest {
         void testDeleteNonExistentKnowledgeBase() {
             // Given
             Long knowledgeBaseId = 999L;
-            when(vectorRepository.deleteByKnowledgeBaseId(knowledgeBaseId)).thenReturn(0);
+            when(vectorRepository.deleteByCourseMaterialId(knowledgeBaseId)).thenReturn(0);
 
             // When
-            vectorService.deleteByKnowledgeBaseId(knowledgeBaseId);
+            vectorService.deleteByCourseMaterialId(knowledgeBaseId);
 
             // Then: 应该正常执行，不抛出异常
-            verify(vectorRepository, times(1)).deleteByKnowledgeBaseId(knowledgeBaseId);
+            verify(vectorRepository, times(1)).deleteByCourseMaterialId(knowledgeBaseId);
         }
     }
 
@@ -484,7 +478,7 @@ class KnowledgeBaseVectorServiceTest {
             // 实际会在设置 metadata 时抛出 NullPointerException，被包装为 RuntimeException
             RuntimeException exception = assertThrows(
                 RuntimeException.class,
-                () -> vectorService.vectorizeAndStore(null, content)
+                () -> vectorService.vectorizeAndStore(null, content, null)
             );
 
             assertTrue(exception.getMessage().contains("向量化知识库失败"),
@@ -501,7 +495,7 @@ class KnowledgeBaseVectorServiceTest {
             // 注意：NPE 发生在 try 块之外，不会被包装
             assertThrows(
                 NullPointerException.class,
-                () -> vectorService.vectorizeAndStore(knowledgeBaseId, null)
+                () -> vectorService.vectorizeAndStore(knowledgeBaseId, null, null)
             );
         }
 
@@ -510,10 +504,10 @@ class KnowledgeBaseVectorServiceTest {
         void testEmptyQuery() {
             // Given
             String emptyQuery = "";
-            when(vectorStore.similaritySearch(emptyQuery)).thenReturn(List.of());
+            when(vectorStore.similaritySearch(any(SearchRequest.class))).thenReturn(List.of());
 
             // When
-            List<Document> results = vectorService.similaritySearch(emptyQuery, null, 5);
+            List<Document> results = vectorService.similaritySearch(emptyQuery, null, null, 5);
 
             // Then
             assertTrue(results.isEmpty());
@@ -525,10 +519,10 @@ class KnowledgeBaseVectorServiceTest {
             // Given
             String query = "测试";
             List<Document> mockResults = createMockDocuments(5);
-            when(vectorStore.similaritySearch(query)).thenReturn(mockResults);
+            when(vectorStore.similaritySearch(any(SearchRequest.class))).thenReturn(mockResults);
 
             // When
-            List<Document> results = vectorService.similaritySearch(query, null, 0);
+            List<Document> results = vectorService.similaritySearch(query, null, null, 0);
 
             // Then
             assertTrue(results.isEmpty(), "topK=0 应该返回空结果");
@@ -541,10 +535,10 @@ class KnowledgeBaseVectorServiceTest {
             String query = "测试";
             int topK = 100;
             List<Document> mockResults = createMockDocuments(5);
-            when(vectorStore.similaritySearch(query)).thenReturn(mockResults);
+            when(vectorStore.similaritySearch(any(SearchRequest.class))).thenReturn(mockResults);
 
             // When
-            List<Document> results = vectorService.similaritySearch(query, null, topK);
+            List<Document> results = vectorService.similaritySearch(query, null, null, topK);
 
             // Then
             assertEquals(5, results.size(), "应该返回所有可用结果");

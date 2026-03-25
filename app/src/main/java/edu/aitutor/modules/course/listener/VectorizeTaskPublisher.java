@@ -1,6 +1,6 @@
 package edu.aitutor.modules.course.listener;
 
-import edu.aitutor.common.async.AbstractStreamProducer;
+import edu.aitutor.common.async.AbstractTaskPublisher;
 import edu.aitutor.common.constant.AsyncTaskStreamConstants;
 import edu.aitutor.infrastructure.redis.RedisService;
 import edu.aitutor.modules.course.model.MaterialVectorStatus;
@@ -10,19 +10,15 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
-/**
- * 向量化任务生产者
- * 负责发送向量化任务到 Redis Stream
- */
 @Slf4j
 @Component
-public class VectorizeStreamProducer extends AbstractStreamProducer<VectorizeStreamProducer.VectorizeTaskPayload> {
+public class VectorizeTaskPublisher extends AbstractTaskPublisher<VectorizeTaskPublisher.VectorizeTaskPayload> {
 
     private final CourseMaterialRepository knowledgeBaseRepository;
 
     record VectorizeTaskPayload(Long kbId, String content) {}
 
-    public VectorizeStreamProducer(RedisService redisService, CourseMaterialRepository knowledgeBaseRepository) {
+    public VectorizeTaskPublisher(RedisService redisService, CourseMaterialRepository knowledgeBaseRepository) {
         super(redisService);
         this.knowledgeBaseRepository = knowledgeBaseRepository;
     }
@@ -33,8 +29,8 @@ public class VectorizeStreamProducer extends AbstractStreamProducer<VectorizeStr
      * @param kbId    知识库ID
      * @param content 文档内容
      */
-    public void sendVectorizeTask(Long kbId, String content) {
-        sendTask(new VectorizeTaskPayload(kbId, content));
+    public void publishVectorizeTask(Long kbId, String content) {
+        publishTask(new VectorizeTaskPayload(kbId, content));
     }
 
     @Override

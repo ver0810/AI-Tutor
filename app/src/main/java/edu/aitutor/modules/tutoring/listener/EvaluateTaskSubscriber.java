@@ -1,6 +1,6 @@
 package edu.aitutor.modules.tutoring.listener;
 
-import edu.aitutor.common.async.AbstractStreamConsumer;
+import edu.aitutor.common.async.AbstractTaskSubscriber;
 import edu.aitutor.common.constant.AsyncTaskStreamConstants;
 import edu.aitutor.common.model.AsyncTaskStatus;
 import edu.aitutor.infrastructure.redis.RedisService;
@@ -20,20 +20,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * 面试评估 Stream 消费者
- * 负责从 Redis Stream 消费消息并执行评估
- */
 @Slf4j
 @Component
-public class EvaluateStreamConsumer extends AbstractStreamConsumer<EvaluateStreamConsumer.EvaluatePayload> {
+public class EvaluateTaskSubscriber extends AbstractTaskSubscriber<EvaluateTaskSubscriber.EvaluatePayload> {
 
     private final TutoringSessionRepository sessionRepository;
     private final AnswerGradingService evaluationService;
     private final TutoringPersistenceService persistenceService;
     private final ObjectMapper objectMapper;
 
-    public EvaluateStreamConsumer(
+    public EvaluateTaskSubscriber(
         RedisService redisService,
         TutoringSessionRepository sessionRepository,
         AnswerGradingService evaluationService,
@@ -65,13 +61,13 @@ public class EvaluateStreamConsumer extends AbstractStreamConsumer<EvaluateStrea
     }
 
     @Override
-    protected String consumerPrefix() {
-        return AsyncTaskStreamConstants.TUTOR_EVALUATE_CONSUMER_PREFIX;
+    protected String subscriberPrefix() {
+        return AsyncTaskStreamConstants.TUTOR_EVALUATE_SUBSCRIBER_PREFIX;
     }
 
     @Override
     protected String threadName() {
-        return "evaluate-consumer";
+        return "evaluate-subscriber";
     }
 
     @Override

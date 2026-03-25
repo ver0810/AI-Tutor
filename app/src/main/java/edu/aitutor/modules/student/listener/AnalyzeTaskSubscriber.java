@@ -1,6 +1,6 @@
 package edu.aitutor.modules.student.listener;
 
-import edu.aitutor.common.async.AbstractStreamConsumer;
+import edu.aitutor.common.async.AbstractTaskSubscriber;
 import edu.aitutor.common.constant.AsyncTaskStreamConstants;
 import edu.aitutor.common.model.AsyncTaskStatus;
 import edu.aitutor.infrastructure.redis.RedisService;
@@ -15,19 +15,15 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
-/**
- * 简历分析 Stream 消费者
- * 负责从 Redis Stream 消费消息并执行 AI 分析
- */
 @Slf4j
 @Component
-public class AnalyzeStreamConsumer extends AbstractStreamConsumer<AnalyzeStreamConsumer.AnalyzePayload> {
+public class AnalyzeTaskSubscriber extends AbstractTaskSubscriber<AnalyzeTaskSubscriber.AnalyzePayload> {
 
     private final StudentProfileAnalysisService gradingService;
     private final StudentProfilePersistenceService persistenceService;
     private final StudentProfileRepository studentProfileRepository;
 
-    public AnalyzeStreamConsumer(
+    public AnalyzeTaskSubscriber(
         RedisService redisService,
         StudentProfileAnalysisService gradingService,
         StudentProfilePersistenceService persistenceService,
@@ -57,13 +53,13 @@ public class AnalyzeStreamConsumer extends AbstractStreamConsumer<AnalyzeStreamC
     }
 
     @Override
-    protected String consumerPrefix() {
-        return AsyncTaskStreamConstants.RESUME_ANALYZE_CONSUMER_PREFIX;
+    protected String subscriberPrefix() {
+        return AsyncTaskStreamConstants.PROFILE_ANALYZE_SUBSCRIBER_PREFIX;
     }
 
     @Override
     protected String threadName() {
-        return "analyze-consumer";
+        return "analyze-subscriber";
     }
 
     @Override

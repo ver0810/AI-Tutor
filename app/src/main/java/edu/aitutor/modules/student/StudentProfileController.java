@@ -21,14 +21,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 课程资料控制器 (业务重构: 简历 → 课程资料)
+ * 学生档案/资料控制器
  * 
- * API映射: /api/studentProfiles/* (兼容保留)
- * 业务流程: 上传 → 解析 → AI分析 → PDF导出学习计划
+ * API映射: /api/student/profiles/*
  */
 @Slf4j
 @RestController
 @RequiredArgsConstructor
+@RequestMapping("/api/student/profiles")
 public class StudentProfileController {
     
     private final StudentProfileUploadService uploadService;
@@ -36,44 +36,35 @@ public class StudentProfileController {
     private final StudentProfileHistoryService historyService;
     
     /**
-     * 上传课程资料并获取分析结果
-     *
-     * @param file 课程资料文件（支持PDF、DOCX、DOC、TXT）
-     * @return 课程资料分析结果，包含评分和建议
+     * 上传并分析
      */
-    @PostMapping(value = "/api/studentProfiles/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @RateLimit(dimensions = {RateLimit.Dimension.GLOBAL, RateLimit.Dimension.IP}, count = 5)
     public Result<Map<String, Object>> uploadAndAnalyze(@RequestParam("file") MultipartFile file) {
         Map<String, Object> result = uploadService.uploadAndAnalyze(file);
-        boolean isDuplicate = (Boolean) result.get("duplicate");
-        if (isDuplicate) {
-            return Result.success("检测到相同资料，已返回历史分析结果", result);
-        }
         return Result.success(result);
     }
     
     /**
-     * 获取所有课程资料列表
+     * 获取列表
      */
-    @GetMapping("/api/studentProfiles")
+    @GetMapping("")
     public Result<List<StudentProfileListItemDTO>> getAllStudentProfiles() {
-        List<StudentProfileListItemDTO> studentProfiles = historyService.getAllStudentProfiles();
-        return Result.success(studentProfiles);
+        return Result.success(historyService.getAllStudentProfiles());
     }
     
     /**
-     * 获取课程资料详情（包含分析历史）
+     * 获取详情
      */
-    @GetMapping("/api/studentProfiles/{id}/detail")
+    @GetMapping("/{id}")
     public Result<StudentProfileDetailDTO> getStudentProfileDetail(@PathVariable Long id) {
-        StudentProfileDetailDTO detail = historyService.getStudentProfileDetail(id);
-        return Result.success(detail);
+        return Result.success(historyService.getStudentProfileDetail(id));
     }
     
     /**
-     * 导出课程资料分析报告为PDF
+     * 导出 PDF (资料分析)
      */
-    @GetMapping("/api/studentProfiles/{id}/export")
+    @GetMapping("/{id}/export/analysis")
     public ResponseEntity<byte[]> exportAnalysisPdf(@PathVariable Long id) {
         try {
             var result = historyService.exportAnalysisPdf(id);
@@ -84,46 +75,27 @@ public class StudentProfileController {
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(result.pdfBytes());
         } catch (Exception e) {
-            log.error("导出PDF失败: studentProfileId={}", id, e);
+            log.error("导出PDF失败", e);
             return ResponseEntity.internalServerError().build();
         }
     }
     
     /**
-     * 删除课程资料
-     *
-     * @param id 课程资料ID
-     * @return 删除结果
+     * 删除
      */
-    @DeleteMapping("/api/studentProfiles/{id}")
+    @DeleteMapping("/{id}")
     public Result<Void> deleteStudentProfile(@PathVariable Long id) {
         deleteService.deleteStudentProfile(id);
         return Result.success(null);
     }
 
     /**
-     * 重新分析课程资料（手动重试）
-     * 用于分析失败后的重试
-     *
-     * @param id 课程资料ID
-     * @return 结果
+     * 重新分析
      */
-    @PostMapping("/api/studentProfiles/{id}/reanalyze")
+    @PostMapping("/{id}/reanalyze")
     @RateLimit(dimensions = {RateLimit.Dimension.GLOBAL, RateLimit.Dimension.IP}, count = 2)
     public Result<Void> reanalyze(@PathVariable Long id) {
         uploadService.reanalyze(id);
         return Result.success(null);
     }
-    
-    /**
-     * 健康检查接口
-     */
-    @GetMapping("/api/studentProfiles/health")
-    public Result<Map<String, String>> health() {
-        return Result.success(Map.of(
-            "status", "UP",
-            "service", "AI Tutor Platform - StudentProfile Service"
-        ));
-    }
-    
 }

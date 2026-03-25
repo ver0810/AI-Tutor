@@ -1,6 +1,6 @@
 package edu.aitutor.modules.student.listener;
 
-import edu.aitutor.common.async.AbstractStreamProducer;
+import edu.aitutor.common.async.AbstractTaskPublisher;
 import edu.aitutor.common.constant.AsyncTaskStreamConstants;
 import edu.aitutor.common.model.AsyncTaskStatus;
 import edu.aitutor.infrastructure.redis.RedisService;
@@ -10,19 +10,15 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
-/**
- * 简历分析任务生产者
- * 负责发送分析任务到 Redis Stream
- */
 @Slf4j
 @Component
-public class AnalyzeStreamProducer extends AbstractStreamProducer<AnalyzeStreamProducer.AnalyzeTaskPayload> {
+public class AnalyzeTaskPublisher extends AbstractTaskPublisher<AnalyzeTaskPublisher.AnalyzeTaskPayload> {
 
     private final StudentProfileRepository studentProfileRepository;
 
     record AnalyzeTaskPayload(Long studentProfileId, String content) {}
 
-    public AnalyzeStreamProducer(RedisService redisService, StudentProfileRepository studentProfileRepository) {
+    public AnalyzeTaskPublisher(RedisService redisService, StudentProfileRepository studentProfileRepository) {
         super(redisService);
         this.studentProfileRepository = studentProfileRepository;
     }
@@ -33,8 +29,8 @@ public class AnalyzeStreamProducer extends AbstractStreamProducer<AnalyzeStreamP
      * @param studentProfileId 简历ID
      * @param content  简历内容
      */
-    public void sendAnalyzeTask(Long studentProfileId, String content) {
-        sendTask(new AnalyzeTaskPayload(studentProfileId, content));
+    public void publishAnalyzeTask(Long studentProfileId, String content) {
+        publishTask(new AnalyzeTaskPayload(studentProfileId, content));
     }
 
     @Override

@@ -53,7 +53,8 @@ public enum ErrorCode {
     COURSE_MATERIAL_QUERY_FAILED(6004, "资料查询失败"),
     COURSE_MATERIAL_DELETE_FAILED(6005, "资料删除失败"),
     COURSE_MATERIAL_VECTORIZATION_FAILED(6006, "资料向量化失败"),
-    
+    AI_ANALYSIS_ERROR(6007, "资料分析失败" ),
+
     // ========== AI服务错误 7xxx ==========
     AI_SERVICE_UNAVAILABLE(7001, "AI服务暂时不可用，请稍后重试"),
     AI_SERVICE_TIMEOUT(7002, "AI服务响应超时"),
@@ -63,6 +64,7 @@ public enum ErrorCode {
 
     // ========== 限流模块错误 8xxx ==========
     RATE_LIMIT_EXCEEDED(8001, "请求过于频繁，请稍后再试");
+
     
     private final Integer code;
     private final String message;

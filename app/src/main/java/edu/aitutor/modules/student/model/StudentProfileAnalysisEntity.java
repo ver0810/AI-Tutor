@@ -6,46 +6,37 @@ import java.time.LocalDateTime;
 
 /**
  * 资料分析结果实体 (业务重构: 简历分析 → 资料分析)
- * 
- * AI分析课程资料后的结果:
- * - 知识点提取
- * - 重难点识别  
- * - 学习建议生成
  */
 @Entity
-@Table(name = "studentProfile_analyses")
+@Table(name = "student_profile_analyses")
 public class StudentProfileAnalysisEntity {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    // 关联的简历
+    // 关联的简历/档案
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "studentProfile_id", nullable = false)
+    @JoinColumn(name = "student_profile_id", nullable = false)
     private StudentProfileEntity studentProfile;
     
-    // 总分 (0-100)
+    // 综合评分 (0-100)
     private Integer overallScore;
     
-    // 各维度评分
-    private Integer contentScore;      // 内容完整性 (0-25)
-    private Integer structureScore;    // 结构清晰度 (0-20)
-    private Integer skillMatchScore;   // 技能匹配度 (0-25)
-    private Integer expressionScore;   // 表达专业性 (0-15)
-    private Integer projectScore;      // 项目经验 (0-15)
+    // 资料难度 (1-5)
+    private Integer difficulty;
     
-    // 简历摘要
+    // 核心总结
     @Column(columnDefinition = "TEXT")
     private String summary;
     
-    // 优点列表 (JSON格式)
+    // 知识点标签 (JSON格式)
     @Column(columnDefinition = "TEXT")
-    private String strengthsJson;
+    private String tagsJson;
     
-    // 改进建议列表 (JSON格式)
+    // 学习路径 (JSON格式)
     @Column(columnDefinition = "TEXT")
-    private String suggestionsJson;
+    private String learningPathJson;
     
     // 评测时间
     @Column(nullable = false)
@@ -80,45 +71,13 @@ public class StudentProfileAnalysisEntity {
     public void setOverallScore(Integer overallScore) {
         this.overallScore = overallScore;
     }
-    
-    public Integer getContentScore() {
-        return contentScore;
+
+    public Integer getDifficulty() {
+        return difficulty;
     }
-    
-    public void setContentScore(Integer contentScore) {
-        this.contentScore = contentScore;
-    }
-    
-    public Integer getStructureScore() {
-        return structureScore;
-    }
-    
-    public void setStructureScore(Integer structureScore) {
-        this.structureScore = structureScore;
-    }
-    
-    public Integer getSkillMatchScore() {
-        return skillMatchScore;
-    }
-    
-    public void setSkillMatchScore(Integer skillMatchScore) {
-        this.skillMatchScore = skillMatchScore;
-    }
-    
-    public Integer getExpressionScore() {
-        return expressionScore;
-    }
-    
-    public void setExpressionScore(Integer expressionScore) {
-        this.expressionScore = expressionScore;
-    }
-    
-    public Integer getProjectScore() {
-        return projectScore;
-    }
-    
-    public void setProjectScore(Integer projectScore) {
-        this.projectScore = projectScore;
+
+    public void setDifficulty(Integer difficulty) {
+        this.difficulty = difficulty;
     }
     
     public String getSummary() {
@@ -129,20 +88,20 @@ public class StudentProfileAnalysisEntity {
         this.summary = summary;
     }
     
-    public String getStrengthsJson() {
-        return strengthsJson;
+    public String getTagsJson() {
+        return tagsJson;
     }
     
-    public void setStrengthsJson(String strengthsJson) {
-        this.strengthsJson = strengthsJson;
+    public void setTagsJson(String tagsJson) {
+        this.tagsJson = tagsJson;
     }
     
-    public String getSuggestionsJson() {
-        return suggestionsJson;
+    public String getLearningPathJson() {
+        return learningPathJson;
     }
     
-    public void setSuggestionsJson(String suggestionsJson) {
-        this.suggestionsJson = suggestionsJson;
+    public void setLearningPathJson(String learningPathJson) {
+        this.learningPathJson = learningPathJson;
     }
     
     public LocalDateTime getAnalyzedAt() {

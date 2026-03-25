@@ -216,6 +216,25 @@ public class CourseMaterialListService {
     // ========== 下载功能 ==========
 
     /**
+     * 获取资料内容预览（用于 AI 分析）
+     */
+    public String getMaterialContentPreview(Long id, int maxLength) {
+        // 这里根据项目实际存储逻辑获取文本。
+        // 如果文本是存储在数据库字段中的，直接读取。
+        // 如果是按分片存储在 vector_store，则需要从 vector_store 中聚合。
+        // 这里的简化实现是从存储中读取（如果上传时保存了全文），或者通过 repository 查询。
+        return knowledgeBaseRepository.findById(id)
+            .map(entity -> {
+                String content = entity.getContent(); // 假设实体类中有 content 字段存储了完整文本
+                if (content == null || content.isBlank()) {
+                    return "（暂无文本内容）";
+                }
+                return content.length() > maxLength ? content.substring(0, maxLength) : content;
+            })
+            .orElse("资料不存在");
+    }
+
+    /**
      * 下载知识库文件
      */
     public byte[] downloadFile(Long id) {

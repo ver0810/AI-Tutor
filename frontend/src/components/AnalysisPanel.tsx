@@ -1,458 +1,255 @@
-import {useMemo} from 'react';
-import {motion} from 'framer-motion';
-import RadarChart from './RadarChart';
-import ScoreProgressBar from './ScoreProgressBar';
-import {formatDateTime} from '../utils/date';
-import {
-  AlertCircle,
-  TrendingUp,
-  Download,
-  Target,
-  CheckCircle2,
-  Loader2,
-  Clock,
-  RefreshCw,
-} from 'lucide-react';
-import type { AnalyzeStatus } from '../api/history';
+import React from 'react';
+import { motion } from 'framer-motion';
+import { BookOpen, Tag, Map, Star, AlertCircle, RefreshCcw, Download } from 'lucide-react';
+
+interface LearningStep {
+  step: number;
+  title: string;
+  description: string;
+}
+
+interface AnalysisData {
+  summary?: string;
+  tags?: string[];
+  learningPath?: LearningStep[];
+  difficulty?: number;
+  overallScore?: number;
+}
 
 interface AnalysisPanelProps {
-  analysis: any;
-  analyzeStatus?: AnalyzeStatus;
-  analyzeError?: string;
-  onExport: () => void;
-  exporting: boolean;
+  analysis?: AnalysisData | null;
+  isLoading?: boolean;
+  // 以下是兼容 StudentProfileDetailPage 的 Props
+  analyzeStatus?: string;
+  analyzeError?: string | null;
+  onExport?: () => void;
+  exporting?: boolean;
   onReanalyze?: () => void;
   reanalyzing?: boolean;
 }
 
-/**
- * 简历分析面板组件
- */
-export default function AnalysisPanel({
-  analysis,
-  analyzeStatus,
+const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ 
+  analysis, 
+  isLoading, 
+  analyzeStatus, 
   analyzeError,
   onExport,
   exporting,
   onReanalyze,
-  reanalyzing,
-}: AnalysisPanelProps) {
-  // 准备雷达图数据
-  const radarData = useMemo(() => {
-    if (!analysis) return [];
-    
-    const projectScore = analysis.projectScore || 0;
-    const skillMatchScore = analysis.skillMatchScore || 0;
-    const contentScore = analysis.contentScore || 0;
-    const structureScore = analysis.structureScore || 0;
-    const expressionScore = analysis.expressionScore || 0;
-    
-    const projectFullMark = 40;
-    const skillMatchFullMark = 20;
-    const contentFullMark = 15;
-    const structureFullMark = 15;
-    const expressionFullMark = 10;
-    
-    return [
-      {
-        subject: '表达专业性',
-        score: expressionScore,
-        fullMark: expressionFullMark
-      },
-      {
-        subject: '技能匹配',
-        score: skillMatchScore,
-        fullMark: skillMatchFullMark
-      },
-      {
-        subject: '内容完整性',
-        score: contentScore,
-        fullMark: contentFullMark
-      },
-      {
-        subject: '结构清晰度',
-        score: structureScore,
-        fullMark: structureFullMark
-      },
-      {
-        subject: '项目经验',
-        score: projectScore,
-        fullMark: projectFullMark
-      }
-    ];
-  }, [analysis]);
-
-  // 按优先级分类建议
-  const suggestionsByPriority = useMemo(() => {
-    if (!analysis?.suggestions) return { high: [], medium: [], low: [] };
-    
-    const suggestions = analysis.suggestions;
-    return {
-      high: suggestions.filter((s: any) => s.priority === '高'),
-      medium: suggestions.filter((s: any) => s.priority === '中'),
-      low: suggestions.filter((s: any) => s.priority === '低')
-    };
-  }, [analysis]);
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case '高':
-        return 'bg-red-50 border-red-200 text-red-700';
-      case '中':
-        return 'bg-amber-50 border-amber-200 text-amber-700';
-      case '低':
-        return 'bg-blue-50 border-blue-200 text-blue-700';
-      default:
-        return 'bg-slate-50 border-slate-200 text-slate-700';
-    }
-  };
-
-  const getPriorityBadgeColor = (priority: string) => {
-    switch (priority) {
-      case '高':
-        return 'bg-red-500 text-white';
-      case '中':
-        return 'bg-amber-500 text-white';
-      case '低':
-        return 'bg-blue-500 text-white';
-      default:
-        return 'bg-slate-500 text-white';
-    }
-  };
-
-  const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      '项目': 'bg-purple-100 text-purple-700',
-      '技能': 'bg-indigo-100 text-indigo-700',
-      '内容': 'bg-emerald-100 text-emerald-700',
-      '格式': 'bg-pink-100 text-pink-700',
-      '结构': 'bg-cyan-100 text-cyan-700',
-      '表达': 'bg-orange-100 text-orange-700'
-    };
-    return colors[category] || 'bg-slate-100 text-slate-700';
-  };
-
-  // 检测分析结果是否有效
-  // 如果总分异常低（< 10）或 summary 包含明显的错误信息，视为无效
-  const hasErrorKeywords = analysis?.summary && (
-    analysis.summary.includes('I/O error') ||
-    analysis.summary.includes('分析过程中出现错误') ||
-    analysis.summary.includes('简历分析失败') ||
-    analysis.summary.includes('Remote host terminated') ||
-    analysis.summary.includes('handshake')
-  );
-  const isAnalysisValid = analysis &&
-    analysis.overallScore >= 10 &&
-    analysis.summary &&
-    !hasErrorKeywords;
-
-  // 判断是否为"分析中"状态
-  // 1. 显式的 PENDING/PROCESSING 状态
-  // 2. 状态未定义且没有分析结果（说明还在处理中）
-  const isProcessing = analyzeStatus === 'PENDING' ||
-    analyzeStatus === 'PROCESSING' ||
-    (analyzeStatus === undefined && !analysis);
-
-  // 处理分析中状态
-  if (isProcessing) {
-    const isExplicitProcessing = analyzeStatus === 'PROCESSING';
+  reanalyzing
+}) => {
+  // 处理分析中的状态
+  if (isLoading || analyzeStatus === 'PENDING' || analyzeStatus === 'PROCESSING') {
     return (
-      <div className="bg-white rounded-2xl p-12 text-center">
-        <div className="w-16 h-16 mx-auto mb-6 bg-blue-100 rounded-full flex items-center justify-center">
-          {isExplicitProcessing ? (
-            <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-          ) : (
-            <Clock className="w-8 h-8 text-yellow-500" />
-          )}
+      <div className="flex flex-col items-center justify-center p-20 space-y-6 text-slate-500 bg-white rounded-3xl border border-slate-100 shadow-sm">
+        <div className="relative">
+          <BookOpen className="w-16 h-16 text-blue-500/20" />
+          <motion.div 
+            className="absolute inset-0 border-4 border-t-blue-500 border-transparent rounded-full"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+          />
         </div>
-        <h3 className="text-xl font-semibold text-slate-700 mb-2">
-          {isExplicitProcessing ? 'AI 正在分析中...' : '等待分析'}
-        </h3>
-        <p className="text-slate-500 mb-4">
-          {isExplicitProcessing
-            ? '请稍候，AI 正在对您的简历进行深度分析'
-            : '简历已上传成功，即将开始 AI 分析'}
-        </p>
-        <p className="text-sm text-slate-400">页面将自动刷新显示分析结果</p>
+        <div className="text-center">
+          <p className="text-lg font-semibold text-slate-800">正在深度分析资料核心内容...</p>
+          <p className="text-sm text-slate-400 mt-2">预计需要 15-30 秒，AI 正在提炼核心知识与学习路径</p>
+        </div>
       </div>
     );
   }
 
-  // 处理分析失败状态
-  // 1. 显式的 FAILED 状态
-  // 2. 有分析结果但结果无效
-  if (analyzeStatus === 'FAILED' || !isAnalysisValid) {
+  // 处理失败状态
+  if (analyzeStatus === 'FAILED' || analyzeError) {
     return (
-      <div className="bg-white rounded-2xl p-12 text-center">
-        <div className="w-16 h-16 mx-auto mb-6 bg-red-100 rounded-full flex items-center justify-center">
-          <AlertCircle className="w-8 h-8 text-red-500" />
+      <div className="bg-red-50 border border-red-100 rounded-3xl p-12 text-center space-y-4">
+        <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto">
+          <AlertCircle className="w-8 h-8" />
         </div>
-        <h3 className="text-xl font-semibold text-slate-700 mb-2">分析失败</h3>
-        <p className="text-slate-500 mb-4">AI 服务暂时不可用，请稍后重试</p>
-        {(analyzeError || analysis?.summary) && (
-          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-left mb-4">
-            <p className="text-sm text-red-600">{analyzeError || analysis.summary}</p>
-          </div>
-        )}
-        {onReanalyze && (
-          <motion.button
-            onClick={onReanalyze}
-            disabled={reanalyzing}
-            className="px-6 py-2.5 bg-primary-500 text-white rounded-xl font-medium hover:bg-primary-600 transition-colors disabled:opacity-50 flex items-center gap-2 mx-auto"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <RefreshCw className={`w-4 h-4 ${reanalyzing ? 'animate-spin' : ''}`} />
-            {reanalyzing ? '重新分析中...' : '重新分析'}
-          </motion.button>
-        )}
+        <h3 className="text-lg font-semibold text-red-900">分析失败</h3>
+        <p className="text-red-700 max-w-md mx-auto">{analyzeError || '由于 AI 服务响应异常，未能完成分析报告。'}</p>
+        <button 
+          onClick={onReanalyze}
+          disabled={reanalyzing}
+          className="px-6 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors flex items-center gap-2 mx-auto disabled:opacity-50"
+        >
+          <RefreshCcw className={`w-4 h-4 ${reanalyzing ? 'animate-spin' : ''}`} />
+          重新尝试分析
+        </button>
       </div>
     );
   }
 
-  const projectScore = analysis.projectScore || 0;
-  const skillMatchScore = analysis.skillMatchScore || 0;
-  const contentScore = analysis.contentScore || 0;
-  const structureScore = analysis.structureScore || 0;
-  const expressionScore = analysis.expressionScore || 0;
+  // 如果没有数据
+  if (!analysis) {
+    return (
+      <div className="p-20 text-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+        <p className="text-slate-400">暂无分析报告，请点击右上角开始分析</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      {/* 核心评价和雷达图 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 核心评价 */}
-        <motion.div 
-          className="bg-white rounded-2xl p-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2 text-slate-500">
-              <TrendingUp className="w-5 h-5" />
-              <span className="font-semibold">核心评价</span>
-            </div>
-            <motion.button
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-8"
+    >
+      {/* 顶部操作栏 (可选) */}
+      {(onExport || onReanalyze) && (
+        <div className="flex justify-end gap-3">
+          {onReanalyze && (
+            <button 
+              onClick={onReanalyze}
+              disabled={reanalyzing}
+              className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all disabled:opacity-50"
+            >
+              <RefreshCcw className={`w-4 h-4 ${reanalyzing ? 'animate-spin' : ''}`} />
+              重新分析
+            </button>
+          )}
+          {onExport && (
+            <button 
               onClick={onExport}
               disabled={exporting}
-              className="px-4 py-2 border border-slate-200 bg-white rounded-lg text-slate-600 text-sm font-medium hover:bg-slate-50 transition-all disabled:opacity-50 flex items-center gap-2"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl transition-all shadow-sm"
             >
               <Download className="w-4 h-4" />
-              {exporting ? '导出中...' : '导出分析报告'}
-            </motion.button>
+              {exporting ? '导出中...' : '下载报告 PDF'}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* 核心总结 */}
+      <section className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 group hover:shadow-md transition-all">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl group-hover:scale-110 transition-transform">
+            <BookOpen className="w-6 h-6" />
           </div>
+          <h3 className="text-xl font-semibold text-slate-800">核心内容总结</h3>
+        </div>
+        <p className="text-slate-600 leading-relaxed text-base whitespace-pre-wrap">
+          {analysis.summary || '暂无总结内容'}
+        </p>
+      </section>
 
-          <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-6">
-            <p className="text-lg text-slate-800 leading-relaxed mb-6">
-              {analysis.summary || '候选人具备扎实的技术基础，有大型项目架构经验。'}
-            </p>
-
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div className="bg-white rounded-xl p-5">
-                <span className="text-sm font-semibold text-emerald-600 block mb-2">总分</span>
-                <span className="text-4xl font-bold text-slate-900">{analysis.overallScore || 0}</span>
-                <span className="text-sm text-slate-500">/ 100</span>
+      {/* 知识标签与难度 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <section className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2.5 bg-purple-50 text-purple-600 rounded-xl">
+                <Tag className="w-6 h-6" />
               </div>
-              <div className="bg-white rounded-xl p-5">
-                <span className="text-sm font-semibold text-emerald-600 block mb-2">分析时间</span>
-                <span className="text-sm text-slate-700">
-                  {formatDateTime(analysis.analyzedAt)}
-                </span>
-              </div>
+              <h3 className="text-xl font-semibold text-slate-800">知识点标签</h3>
             </div>
+            <div className="flex flex-wrap gap-3">
+              {(analysis.tags && analysis.tags.length > 0) ? (
+                analysis.tags.map((tag, idx) => (
+                  <span 
+                    key={idx}
+                    className="px-4 py-2 bg-purple-50 text-purple-700 rounded-2xl text-sm font-semibold border border-purple-100/50 hover:bg-purple-100 transition-colors cursor-default"
+                  >
+                    #{tag}
+                  </span>
+                ))
+              ) : (
+                <p className="text-slate-400">暂无知识点标签</p>
+              )}
+            </div>
+          </div>
+        </section>
 
-            {/* 优势标签 */}
-            {analysis.strengths && analysis.strengths.length > 0 && (
-              <div className="bg-white rounded-xl p-4">
-                <span className="text-sm font-semibold text-emerald-600 block mb-3">优势亮点</span>
-                <div className="flex flex-wrap gap-2">
-                  {analysis.strengths.map((s: string, i: number) => (
-                    <span key={i} className="px-3 py-1.5 bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-sm font-medium">
-                      {s}
-                    </span>
-                  ))}
+        <section className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl">
+              <Star className="w-6 h-6" />
+            </div>
+            <h3 className="text-xl font-semibold text-slate-800">学习难度评估</h3>
+          </div>
+          <div className="flex flex-col space-y-4">
+            <div className="flex items-center gap-2">
+              {[1, 2, 3, 4, 5].map((s) => (
+                <Star 
+                  key={s}
+                  className={`w-8 h-8 ${s <= (analysis.difficulty || 0) ? 'text-amber-400 fill-amber-400' : 'text-slate-200'}`}
+                />
+              ))}
+            </div>
+            <div className="p-4 bg-amber-50/50 rounded-2xl border border-amber-100">
+              <p className="text-amber-800 font-semibold text-base">
+                {analysis.difficulty ? (
+                  analysis.difficulty >= 5 ? '🎓 专家级资料：需要深厚的背景知识' :
+                  analysis.difficulty >= 4 ? '📖 进阶级资料：适合已有基础的学生' :
+                  analysis.difficulty >= 3 ? '📐 中等难度：需要专注研读' :
+                  '🌱 入门资料：适合初学者快速掌握'
+                ) : '尚未评估难度'}
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      {/* 学习路径 */}
+      <section className="bg-slate-900 rounded-[2.5rem] p-10 text-white shadow-2xl overflow-hidden relative border-4 border-slate-800">
+        <div className="absolute top-0 right-0 p-12 opacity-5">
+          <Map className="w-64 h-64" />
+        </div>
+        
+        <div className="flex items-center gap-3 mb-10 relative z-10">
+          <div className="p-3 bg-blue-500/20 text-blue-400 rounded-2xl ring-1 ring-blue-400/30">
+            <Map className="w-8 h-8" />
+          </div>
+          <div>
+            <h3 className="text-2xl font-semibold">推荐学习路径</h3>
+            <p className="text-slate-400 mt-1">AI 已为你制定循序渐进的学习步骤</p>
+          </div>
+        </div>
+
+        <div className="relative space-y-12 mb-10">
+          {/* 连接线 */}
+          <div className="absolute left-6 top-4 bottom-4 w-1 bg-gradient-to-b from-blue-500/50 via-blue-500/20 to-transparent" />
+
+          {analysis.learningPath && analysis.learningPath.length > 0 ? (
+            analysis.learningPath.map((step, idx) => (
+              <motion.div 
+                key={idx}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.1 }}
+                className="relative pl-20 group"
+              >
+                {/* 步骤圆点 */}
+                <div className="absolute left-0 top-0 w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center text-base font-bold border-4 border-slate-900 z-10 shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform">
+                  {step.step || (idx + 1)}
                 </div>
-              </div>
-            )}
-          </div>
-        </motion.div>
-
-        {/* 多维度评分雷达图 */}
-        <motion.div 
-          className="bg-white rounded-2xl p-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <div className="flex items-center gap-2 text-slate-500 mb-6">
-            <Target className="w-5 h-5" />
-            <span className="font-semibold">多维度评分</span>
-          </div>
-
-          <RadarChart data={radarData} height={320} />
-
-          {/* 维度得分详情 */}
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <ScoreProgressBar
-              label="项目经验"
-              score={projectScore}
-              maxScore={40}
-              color="bg-purple-500"
-              delay={0.3}
-              className="col-span-2"
-            />
-            <ScoreProgressBar
-              label="技能匹配"
-              score={skillMatchScore}
-              maxScore={20}
-              color="bg-blue-500"
-              delay={0.4}
-            />
-            <ScoreProgressBar
-              label="内容完整性"
-              score={contentScore}
-              maxScore={15}
-              color="bg-emerald-500"
-              delay={0.5}
-            />
-            <ScoreProgressBar
-              label="结构清晰度"
-              score={structureScore}
-              maxScore={15}
-              color="bg-cyan-500"
-              delay={0.6}
-            />
-            <ScoreProgressBar
-              label="表达专业性"
-              score={expressionScore}
-              maxScore={10}
-              color="bg-orange-500"
-              delay={0.7}
-            />
-          </div>
-        </motion.div>
-      </div>
-
-      {/* 改进建议 - 按优先级分类 */}
-      <motion.div 
-        className="bg-white rounded-2xl p-6"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <div className="flex items-center gap-2 text-slate-500 mb-6">
-          <CheckCircle2 className="w-5 h-5" />
-          <span className="font-semibold">改进建议</span>
-          <span className="text-sm text-slate-400">
-            ({analysis.suggestions?.length || 0} 条)
-          </span>
+                
+                <div className="bg-white/5 p-6 rounded-3xl border border-white/10 hover:bg-white/10 transition-colors">
+                  <h4 className="text-xl font-semibold text-blue-400 mb-2">
+                    {step.title}
+                  </h4>
+                  <p className="text-slate-300 text-base leading-relaxed">
+                    {step.description}
+                  </p>
+                </div>
+              </motion.div>
+            ))
+          ) : (
+            <div className="pl-20 py-10 text-slate-500 text-base font-medium">
+              暂未生成学习路径建议。
+            </div>
+          )}
         </div>
 
-        <div className="space-y-6">
-          {/* 高优先级 */}
-          {suggestionsByPriority.high.length > 0 && (
-            <SuggestionSection
-              priority="高"
-              suggestions={suggestionsByPriority.high}
-              getPriorityColor={getPriorityColor}
-              getPriorityBadgeColor={getPriorityBadgeColor}
-              getCategoryColor={getCategoryColor}
-              delay={0.4}
-            />
-          )}
-
-          {/* 中优先级 */}
-          {suggestionsByPriority.medium.length > 0 && (
-            <SuggestionSection
-              priority="中"
-              suggestions={suggestionsByPriority.medium}
-              getPriorityColor={getPriorityColor}
-              getPriorityBadgeColor={getPriorityBadgeColor}
-              getCategoryColor={getCategoryColor}
-              delay={0.5}
-            />
-          )}
-
-          {/* 低优先级 */}
-          {suggestionsByPriority.low.length > 0 && (
-            <SuggestionSection
-              priority="低"
-              suggestions={suggestionsByPriority.low}
-              getPriorityColor={getPriorityColor}
-              getPriorityBadgeColor={getPriorityBadgeColor}
-              getCategoryColor={getCategoryColor}
-              delay={0.6}
-            />
-          )}
-
-          {analysis.suggestions?.length === 0 && (
-            <div className="text-center py-8 text-slate-500">暂无改进建议</div>
-          )}
+        <div className="mt-8 p-6 bg-blue-500/10 rounded-3xl border border-blue-500/20 flex items-start gap-4">
+          <AlertCircle className="w-6 h-6 text-blue-400 shrink-0 mt-1" />
+          <p className="text-base text-blue-200/90 leading-relaxed font-medium">
+            AI 助教提示：此学习路径是基于资料内容的逻辑深度生成的。完成每个阶段后，建议点击顶部的“开始测验”来检验你的掌握程度。
+          </p>
         </div>
-      </motion.div>
-    </div>
+      </section>
+    </motion.div>
   );
-}
+};
 
-// 建议分组组件
-function SuggestionSection({
-  priority,
-  suggestions,
-  getPriorityColor,
-  getPriorityBadgeColor,
-  getCategoryColor,
-  delay
-}: {
-  priority: string;
-  suggestions: any[];
-  getPriorityColor: (p: string) => string;
-  getPriorityBadgeColor: (p: string) => string;
-  getCategoryColor: (c: string) => string;
-  delay: number;
-}) {
-  const priorityColors: Record<string, { bg: string; text: string; border: string }> = {
-    '高': { bg: 'bg-red-100', text: 'text-red-700', border: 'bg-red-100' },
-    '中': { bg: 'bg-amber-100', text: 'text-amber-700', border: 'bg-amber-100' },
-    '低': { bg: 'bg-blue-100', text: 'text-blue-700', border: 'bg-blue-100' }
-  };
-
-  const colors = priorityColors[priority] || priorityColors['中'];
-
-  return (
-    <div>
-      <div className="flex items-center gap-2 mb-4">
-        <span className={`px-3 py-1 ${colors.bg} ${colors.text} rounded-full text-sm font-semibold`}>
-          {priority}优先级 ({suggestions.length})
-        </span>
-        <div className={`flex-1 h-px ${colors.border}`}></div>
-      </div>
-      <div className="space-y-3">
-        {suggestions.map((s: any, i: number) => (
-          <motion.div 
-            key={`${priority}-${i}`}
-            className={`p-4 rounded-xl border-2 ${getPriorityColor(priority)}`}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: delay + i * 0.1 }}
-          >
-            <div className="flex items-start gap-3 mb-2">
-              <span className={`px-2 py-0.5 rounded text-xs font-semibold ${getPriorityBadgeColor(priority)}`}>
-                {priority}
-              </span>
-              <span className={`px-2 py-0.5 rounded text-xs font-medium ${getCategoryColor(s.category || '其他')}`}>
-                {s.category || '其他'}
-              </span>
-            </div>
-            <div className="mb-2">
-              <p className="font-semibold text-slate-900 mb-1">{s.issue || '问题描述'}</p>
-              <p className="text-sm leading-relaxed">{s.recommendation || s}</p>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
+export default AnalysisPanel;

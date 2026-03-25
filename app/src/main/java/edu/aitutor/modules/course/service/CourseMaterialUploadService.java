@@ -5,7 +5,7 @@ import edu.aitutor.common.exception.ErrorCode;
 import edu.aitutor.infrastructure.file.FileHashService;
 import edu.aitutor.infrastructure.file.FileStorageService;
 import edu.aitutor.infrastructure.file.FileValidationService;
-import edu.aitutor.modules.course.listener.VectorizeStreamProducer;
+import edu.aitutor.modules.course.listener.VectorizeTaskPublisher;
 import edu.aitutor.modules.course.model.CourseMaterialEntity;
 import edu.aitutor.modules.course.model.MaterialVectorStatus;
 import edu.aitutor.modules.course.repository.CourseMaterialRepository;
@@ -33,7 +33,7 @@ public class CourseMaterialUploadService {
     private final CourseMaterialRepository knowledgeBaseRepository;
     private final FileValidationService fileValidationService;
     private final FileHashService fileHashService;
-    private final VectorizeStreamProducer vectorizeStreamProducer;
+    private final VectorizeTaskPublisher vectorizeTaskPublisher;
 
     private static final long MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
     
@@ -79,7 +79,7 @@ public class CourseMaterialUploadService {
         CourseMaterialEntity savedKb = persistenceService.saveCourseMaterial(file, courseId, name, category, fileKey, fileUrl, fileHash);
 
         // 7. 发送向量化任务到 Redis Stream（异步处理）
-        vectorizeStreamProducer.sendVectorizeTask(savedKb.getId(), content);
+        vectorizeTaskPublisher.publishVectorizeTask(savedKb.getId(), content);
 
         log.info("知识库上传完成，向量化任务已入队: {}, kbId={}", fileName, savedKb.getId());
 
@@ -136,9 +136,8 @@ public class CourseMaterialUploadService {
         persistenceService.updateVectorStatusToPending(kbId);
 
         // 3. 发送向量化任务到 Stream
-        vectorizeStreamProducer.sendVectorizeTask(kbId, content);
+        vectorizeTaskPublisher.publishVectorizeTask(kbId, content);
 
         log.info("重新向量化任务已发送: kbId={}", kbId);
     }
 }
-

@@ -1,161 +1,101 @@
 import { request } from './request';
 
+// 向量化/分析状态
 export type AnalyzeStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
-export type EvaluateStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 
-export interface StudentProfileListItem {
-  id: number;
-  filename: string;
-  fileSize: number;
-  uploadedAt: string;
-  accessCount: number;
-  latestScore?: number;
-  lastAnalyzedAt?: string;
-  tutoringCount: number;
-  analyzeStatus?: AnalyzeStatus;
-  analyzeError?: string;
-  storageUrl?: string;
+export interface LearningStep {
+  step: number;
+  title: string;
+  description: string;
 }
 
-export interface StudentProfileStats {
-  totalCount: number;
-  totalTutoringCount: number;
-  totalAccessCount: number;
-}
-
-export interface AnalysisItem {
+export interface StudentProfileAnalysis {
   id: number;
-  overallScore: number;
-  contentScore: number;
-  structureScore: number;
-  skillMatchScore: number;
-  expressionScore: number;
-  projectScore: number;
   summary: string;
+  tags: string[];
+  learningPath: LearningStep[];
+  overallScore: number;
+  difficulty: number;
   analyzedAt: string;
-  strengths: string[];
-  suggestions: unknown[];
 }
 
 export interface TutoringItem {
-  id: number;
   sessionId: string;
-  totalQuestions: number;
+  studentProfileId: number;
+  score: number;
   status: string;
-  evaluateStatus?: EvaluateStatus;
-  evaluateError?: string;
-  overallScore: number | null;
-  overallFeedback: string | null;
   createdAt: string;
   completedAt: string | null;
-  questions?: unknown[];
-  strengths?: string[];
-  improvements?: string[];
-  referenceAnswers?: unknown[];
 }
 
-export interface AnswerItem {
-  questionIndex: number;
-  question: string;
-  category: string;
-  userAnswer: string;
-  score: number;
-  feedback: string;
-  referenceAnswer?: string;
-  keyPoints?: string[];
-  answeredAt: string;
+export interface TutoringDetail extends TutoringItem {
+  questions: Array<{
+    id: string;
+    question: string;
+    options: string[];
+    answer: string;
+    userAnswer: string;
+    isCorrect: boolean;
+    explanation: string;
+  }>;
+  aiFeedback: string;
 }
 
 export interface StudentProfileDetail {
   id: number;
   filename: string;
-  fileSize: number;
-  contentType: string;
-  storageUrl: string;
   uploadedAt: string;
-  accessCount: number;
   studentProfileText: string;
-  analyzeStatus?: AnalyzeStatus;
-  analyzeError?: string;
-  analyses: AnalysisItem[];
+  analyzeStatus: AnalyzeStatus;
+  analyzeError: string | null;
+  analyses: StudentProfileAnalysis[];
   tutorings: TutoringItem[];
-}
-
-export interface TutoringDetail extends TutoringItem {
-  evaluateStatus?: EvaluateStatus;
-  evaluateError?: string;
-  answers: AnswerItem[];
 }
 
 export const historyApi = {
   /**
-   * 获取所有简历列表
+   * 获取简历/档案列表
    */
-  async getStudentProfiles(): Promise<StudentProfileListItem[]> {
-    return request.get<StudentProfileListItem[]>('/api/studentProfiles');
+  async getStudentProfiles(): Promise<StudentProfileDetail[]> {
+    return request.get<StudentProfileDetail[]>('/api/student/profiles');
   },
 
   /**
-   * 获取简历详情
+   * 获取简历/档案详情
    */
   async getStudentProfileDetail(id: number): Promise<StudentProfileDetail> {
-    return request.get<StudentProfileDetail>(`/api/studentProfiles/${id}/detail`);
+    return request.get<StudentProfileDetail>(`/api/student/profiles/${id}`);
   },
 
   /**
-   * 获取面试详情
-   */
-  async getTutoringDetail(sessionId: string): Promise<TutoringDetail> {
-    return request.get<TutoringDetail>(`/api/tutoring/sessions/${sessionId}/details`);
-  },
-
-  /**
-   * 导出简历分析报告PDF
-   */
-  async exportAnalysisPdf(studentProfileId: number): Promise<Blob> {
-    const response = await request.getInstance().get(`/api/studentProfiles/${studentProfileId}/export`, {
-      responseType: 'blob',
-      skipResultTransform: true,
-    } as never);
-    return response.data;
-  },
-
-  /**
-   * 导出面试报告PDF
-   */
-  async exportTutoringPdf(sessionId: string): Promise<Blob> {
-    const response = await request.getInstance().get(`/api/tutoring/sessions/${sessionId}/export`, {
-      responseType: 'blob',
-      skipResultTransform: true,
-    } as never);
-    return response.data;
-  },
-
-  /**
-   * 删除简历
-   */
-  async deleteStudentProfile(id: number): Promise<void> {
-    return request.delete(`/api/studentProfiles/${id}`);
-  },
-
-  /**
-   * 删除面试记录
-   */
-  async deleteTutoring(sessionId: string): Promise<void> {
-    return request.delete(`/api/tutoring/sessions/${sessionId}`);
-  },
-
-  /**
-   * 获取简历统计信息
-   */
-  async getStatistics(): Promise<StudentProfileStats> {
-    return request.get<StudentProfileStats>('/api/studentProfiles/statistics');
-  },
-
-  /**
-   * 重新分析简历
+   * 重新分析
    */
   async reanalyze(id: number): Promise<void> {
-    return request.post(`/api/studentProfiles/${id}/reanalyze`);
+    return request.post(`/api/student/profiles/${id}/reanalyze`);
+  },
+
+  /**
+   * 获取测验详情
+   */
+  async getTutoringDetail(sessionId: string): Promise<TutoringDetail> {
+    return request.get<TutoringDetail>(`/api/tutoring/sessions/${sessionId}`);
+  },
+
+  /**
+   * 导出分析 PDF
+   */
+  async exportAnalysisPdf(id: number): Promise<Blob> {
+    return request.get<Blob>(`/api/student/profiles/${id}/export/analysis`, {
+      responseType: 'blob',
+    });
+  },
+
+  /**
+   * 导出测验 PDF
+   */
+  async exportTutoringPdf(sessionId: string): Promise<Blob> {
+    return request.get<Blob>(`/api/tutoring/sessions/${sessionId}/export`, {
+      responseType: 'blob',
+    });
   },
 };

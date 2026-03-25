@@ -2,15 +2,8 @@ package edu.aitutor.modules.course;
 
 import edu.aitutor.common.annotation.RateLimit;
 import edu.aitutor.common.result.Result;
-import edu.aitutor.modules.course.model.CourseMaterialListItemDTO;
-import edu.aitutor.modules.course.model.CourseMaterialStatsDTO;
-import edu.aitutor.modules.course.model.QueryRequest;
-import edu.aitutor.modules.course.model.QueryResponse;
-import edu.aitutor.modules.course.model.MaterialVectorStatus;
-import edu.aitutor.modules.course.service.CourseMaterialDeleteService;
-import edu.aitutor.modules.course.service.CourseMaterialListService;
-import edu.aitutor.modules.course.service.CourseMaterialQueryService;
-import edu.aitutor.modules.course.service.CourseMaterialUploadService;
+import edu.aitutor.modules.course.model.*;
+import edu.aitutor.modules.course.service.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +31,16 @@ public class CourseMaterialController {
     private final CourseMaterialQueryService queryService;
     private final CourseMaterialListService listService;
     private final CourseMaterialDeleteService deleteService;
+    private final CourseMaterialAnalysisService analysisService;
+
+    /**
+     * 获取课程资料分析报告
+     */
+    @GetMapping("/api/course/materials/{id}/analysis")
+    @RateLimit(dimensions = {RateLimit.Dimension.GLOBAL, RateLimit.Dimension.IP}, count = 2)
+    public Result<CourseMaterialAnalysisResponse> analyzeMaterial(@PathVariable Long id) {
+        return Result.success(analysisService.analyzeMaterial(id));
+    }
 
     /**
      * 获取所有课程资料列表

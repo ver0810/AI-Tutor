@@ -13,32 +13,27 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/**
- * Redis Stream 消费者模板基类。
- * <p>
- * 将消费循环、ACK、重试与生命周期管理收敛到统一模板，子类仅关注业务处理逻辑。
- */
 @Slf4j
-public abstract class AbstractStreamConsumer<T> {
+public abstract class AbstractTaskSubscriber<T> {
 
     private final RedisService redisService;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private ExecutorService executorService;
-    private String consumerName;
+    private String subscriberName;
 
-    protected AbstractStreamConsumer(RedisService redisService) {
+    protected AbstractTaskSubscriber(RedisService redisService) {
         this.redisService = redisService;
     }
 
     @PostConstruct
     public void init() {
-        this.consumerName = consumerPrefix() + UUID.randomUUID().toString().substring(0, 8);
+        this.subscriberName = subscriberPrefix() + UUID.randomUUID().toString().substring(0, 8);
 
         try {
             redisService.createStreamGroup(streamKey(), groupName());
-            log.info("Redis Stream 消费者组已创建或已存在: {}", groupName());
+            log.info("Redis Stream 任务组已创建或已存在: {}", groupName());
         } catch (Exception e) {
-            log.warn("创建消费者组时发生异常（可能已存在）: {}", e.getMessage());
+            log.warn("创建任务组时发生异常（可能已存在）: {}", e.getMessage());
         }
 
         this.executorService = Executors.newSingleThreadExecutor(r -> {
@@ -49,7 +44,7 @@ public abstract class AbstractStreamConsumer<T> {
 
         running.set(true);
         executorService.submit(this::consumeLoop);
-        log.info("{}消费者已启动: consumerName={}", taskDisplayName(), consumerName);
+        log.info("{}订阅者已启动: subscriberName={}", taskDisplayName(), subscriberName);
     }
 
     @PreDestroy
@@ -58,7 +53,7 @@ public abstract class AbstractStreamConsumer<T> {
         if (executorService != null) {
             executorService.shutdown();
         }
-        log.info("{}消费者已关闭: consumerName={}", taskDisplayName(), consumerName);
+        log.info("{}订阅者已关闭: subscriberName={}", taskDisplayName(), subscriberName);
     }
 
     private void consumeLoop() {
@@ -67,14 +62,14 @@ public abstract class AbstractStreamConsumer<T> {
                 redisService.streamConsumeMessages(
                     streamKey(),
                     groupName(),
-                    consumerName,
+                    subscriberName,
                     AsyncTaskStreamConstants.BATCH_SIZE,
                     AsyncTaskStreamConstants.POLL_INTERVAL_MS,
                     this::processMessage
                 );
             } catch (Exception e) {
                 if (Thread.currentThread().isInterrupted()) {
-                    log.info("消费者线程被中断");
+                    log.info("订阅者线程被中断");
                     break;
                 }
                 log.error("消费消息时发生错误: {}", e.getMessage(), e);
@@ -145,7 +140,7 @@ public abstract class AbstractStreamConsumer<T> {
 
     protected abstract String groupName();
 
-    protected abstract String consumerPrefix();
+    protected abstract String subscriberPrefix();
 
     protected abstract String threadName();
 

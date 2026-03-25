@@ -21,5 +21,8 @@ public record CourseMaterialListItemDTO(
     String vectorError,
     Integer chunkCount
 ) {
+    public CharSequence getName() {
+        return  name;
+    }
 }
 

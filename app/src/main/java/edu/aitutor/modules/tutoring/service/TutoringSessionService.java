@@ -5,7 +5,7 @@ import edu.aitutor.common.exception.ErrorCode;
 import edu.aitutor.common.model.AsyncTaskStatus;
 import edu.aitutor.infrastructure.redis.TutoringSessionCache;
 import edu.aitutor.infrastructure.redis.TutoringSessionCache.CachedSession;
-import edu.aitutor.modules.tutoring.listener.EvaluateStreamProducer;
+import edu.aitutor.modules.tutoring.listener.EvaluateTaskPublisher;
 import edu.aitutor.modules.tutoring.model.*;
 import edu.aitutor.modules.tutoring.model.TutoringSessionDTO.SessionStatus;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +33,7 @@ public class TutoringSessionService {
     private final TutoringPersistenceService persistenceService;
     private final TutoringSessionCache sessionCache;
     private final ObjectMapper objectMapper;
-    private final EvaluateStreamProducer evaluateStreamProducer;
+    private final EvaluateTaskPublisher evaluateTaskPublisher;
 
     /**
      * 创建新的面试会话
@@ -320,7 +320,7 @@ public class TutoringSessionService {
             // 如果是最后一题，设置评估状态为 PENDING 并触发异步评估
             if (!hasNextQuestion) {
                 persistenceService.updateEvaluateStatus(request.sessionId(), AsyncTaskStatus.PENDING, null);
-                evaluateStreamProducer.sendEvaluateTask(request.sessionId());
+        evaluateTaskPublisher.publishEvaluateTask(request.sessionId());
                 log.info("会话 {} 已完成所有问题，评估任务已入队", request.sessionId());
             }
         } catch (Exception e) {
@@ -403,7 +403,7 @@ public class TutoringSessionService {
         }
 
         // 发送评估任务到 Redis Stream
-        evaluateStreamProducer.sendEvaluateTask(sessionId);
+            evaluateTaskPublisher.publishEvaluateTask(sessionId);
 
         log.info("会话 {} 提前交卷，评估任务已入队", sessionId);
     }
