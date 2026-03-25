@@ -3,7 +3,7 @@ import { request } from './request';
 export type AnalyzeStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 export type EvaluateStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 
-export interface ResumeListItem {
+export interface StudentProfileListItem {
   id: number;
   filename: string;
   fileSize: number;
@@ -11,15 +11,15 @@ export interface ResumeListItem {
   accessCount: number;
   latestScore?: number;
   lastAnalyzedAt?: string;
-  interviewCount: number;
+  tutoringCount: number;
   analyzeStatus?: AnalyzeStatus;
   analyzeError?: string;
   storageUrl?: string;
 }
 
-export interface ResumeStats {
+export interface StudentProfileStats {
   totalCount: number;
-  totalInterviewCount: number;
+  totalTutoringCount: number;
   totalAccessCount: number;
 }
 
@@ -37,7 +37,7 @@ export interface AnalysisItem {
   suggestions: unknown[];
 }
 
-export interface InterviewItem {
+export interface TutoringItem {
   id: number;
   sessionId: string;
   totalQuestions: number;
@@ -66,7 +66,7 @@ export interface AnswerItem {
   answeredAt: string;
 }
 
-export interface ResumeDetail {
+export interface StudentProfileDetail {
   id: number;
   filename: string;
   fileSize: number;
@@ -74,14 +74,14 @@ export interface ResumeDetail {
   storageUrl: string;
   uploadedAt: string;
   accessCount: number;
-  resumeText: string;
+  studentProfileText: string;
   analyzeStatus?: AnalyzeStatus;
   analyzeError?: string;
   analyses: AnalysisItem[];
-  interviews: InterviewItem[];
+  tutorings: TutoringItem[];
 }
 
-export interface InterviewDetail extends InterviewItem {
+export interface TutoringDetail extends TutoringItem {
   evaluateStatus?: EvaluateStatus;
   evaluateError?: string;
   answers: AnswerItem[];
@@ -91,29 +91,29 @@ export const historyApi = {
   /**
    * 获取所有简历列表
    */
-  async getResumes(): Promise<ResumeListItem[]> {
-    return request.get<ResumeListItem[]>('/api/resumes');
+  async getStudentProfiles(): Promise<StudentProfileListItem[]> {
+    return request.get<StudentProfileListItem[]>('/api/studentProfiles');
   },
 
   /**
    * 获取简历详情
    */
-  async getResumeDetail(id: number): Promise<ResumeDetail> {
-    return request.get<ResumeDetail>(`/api/resumes/${id}/detail`);
+  async getStudentProfileDetail(id: number): Promise<StudentProfileDetail> {
+    return request.get<StudentProfileDetail>(`/api/studentProfiles/${id}/detail`);
   },
 
   /**
    * 获取面试详情
    */
-  async getInterviewDetail(sessionId: string): Promise<InterviewDetail> {
-    return request.get<InterviewDetail>(`/api/interview/sessions/${sessionId}/details`);
+  async getTutoringDetail(sessionId: string): Promise<TutoringDetail> {
+    return request.get<TutoringDetail>(`/api/tutoring/sessions/${sessionId}/details`);
   },
 
   /**
    * 导出简历分析报告PDF
    */
-  async exportAnalysisPdf(resumeId: number): Promise<Blob> {
-    const response = await request.getInstance().get(`/api/resumes/${resumeId}/export`, {
+  async exportAnalysisPdf(studentProfileId: number): Promise<Blob> {
+    const response = await request.getInstance().get(`/api/studentProfiles/${studentProfileId}/export`, {
       responseType: 'blob',
       skipResultTransform: true,
     } as never);
@@ -123,8 +123,8 @@ export const historyApi = {
   /**
    * 导出面试报告PDF
    */
-  async exportInterviewPdf(sessionId: string): Promise<Blob> {
-    const response = await request.getInstance().get(`/api/interview/sessions/${sessionId}/export`, {
+  async exportTutoringPdf(sessionId: string): Promise<Blob> {
+    const response = await request.getInstance().get(`/api/tutoring/sessions/${sessionId}/export`, {
       responseType: 'blob',
       skipResultTransform: true,
     } as never);
@@ -134,28 +134,28 @@ export const historyApi = {
   /**
    * 删除简历
    */
-  async deleteResume(id: number): Promise<void> {
-    return request.delete(`/api/resumes/${id}`);
+  async deleteStudentProfile(id: number): Promise<void> {
+    return request.delete(`/api/studentProfiles/${id}`);
   },
 
   /**
    * 删除面试记录
    */
-  async deleteInterview(sessionId: string): Promise<void> {
-    return request.delete(`/api/interview/sessions/${sessionId}`);
+  async deleteTutoring(sessionId: string): Promise<void> {
+    return request.delete(`/api/tutoring/sessions/${sessionId}`);
   },
 
   /**
    * 获取简历统计信息
    */
-  async getStatistics(): Promise<ResumeStats> {
-    return request.get<ResumeStats>('/api/resumes/statistics');
+  async getStatistics(): Promise<StudentProfileStats> {
+    return request.get<StudentProfileStats>('/api/studentProfiles/statistics');
   },
 
   /**
    * 重新分析简历
    */
   async reanalyze(id: number): Promise<void> {
-    return request.post(`/api/resumes/${id}/reanalyze`);
+    return request.post(`/api/studentProfiles/${id}/reanalyze`);
   },
 };

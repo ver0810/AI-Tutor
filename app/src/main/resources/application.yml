@@ -16,9 +16,9 @@ spring:
 
   # PostgreSQL数据库配置
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:interview_guide}
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:ai_tutor}
     username: ${POSTGRES_USER:postgres}
-    password: ${POSTGRES_PASSWORD:123456}
+    password: ${POSTGRES_PASSWORD:password}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -33,7 +33,7 @@ spring:
   servlet:
     multipart:
       enabled: true
-      max-file-size: 50MB  # 支持知识库上传（简历限制在业务层检查）
+      max-file-size: 50MB  # 支持知识库上传
       max-request-size: 50MB
   
 
@@ -53,7 +53,7 @@ spring:
   ai:
     openai:
       base-url: https://dashscope.aliyuncs.com/compatible-mode
-      api-key: ${AI_BAILIAN_API_KEY}
+      api-key: sk-21828c8b03c044cd9e68f50e0c2c64ef
       chat:
         options:
           model: ${AI_MODEL:qwen-plus}
@@ -82,11 +82,11 @@ app:
     structured-max-attempts: ${APP_AI_STRUCTURED_MAX_ATTEMPTS:2}
     # 重试时是否将上次错误原因注入提示词，帮助模型定向修复输出
     structured-include-last-error: ${APP_AI_STRUCTURED_INCLUDE_LAST_ERROR:true}
-  interview:
-    follow-up-count: ${APP_INTERVIEW_FOLLOW_UP_COUNT:1}
+  tutor:
+    follow-up-count: ${APP_TUTOR_FOLLOW_UP_COUNT:1}
     evaluation:
-      batch-size: ${APP_INTERVIEW_EVALUATION_BATCH_SIZE:8}
-  resume:
+      batch-size: ${APP_TUTOR_EVALUATION_BATCH_SIZE:8}
+  material:
     upload-dir: ${java.io.tmpdir}/aitutor/materials
     allowed-types:
       - application/pdf
@@ -97,11 +97,23 @@ app:
   # RustFS (S3兼容) 存储配置
   storage:
     endpoint: ${APP_STORAGE_ENDPOINT:http://localhost:9000}
-    access-key: ${APP_STORAGE_ACCESS_KEY:wr45VXJZhCxc6FAWz0YR}
-    secret-key: ${APP_STORAGE_SECRET_KEY:GtKxV57WJkpw4CvASPBzTy2DYElLnRqh8dIXQa0m}
-    bucket: ${APP_STORAGE_BUCKET:interview-guide}
+    access-key: ${APP_STORAGE_ACCESS_KEY:minioadmin}
+    secret-key: ${APP_STORAGE_SECRET_KEY:minioadmin}
+    bucket: ${APP_STORAGE_BUCKET:ai-tutor}
     region: ${APP_STORAGE_REGION:us-east-1}
   
   # CORS配置 - React前端
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:5174,http://localhost:80}
+
+# Actuator configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:5174,http://localhost:80}

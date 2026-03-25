@@ -10,14 +10,11 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# 安装 pnpm
-RUN npm install -g pnpm
-
 # 复制依赖定义文件
-COPY package.json pnpm-lock.yaml ./
+COPY package.json package-lock.json ./
 
 # 安装依赖
-RUN pnpm install
+RUN npm install
 
 # 复制源代码
 COPY . .
@@ -30,4 +27,4 @@ EXPOSE 3000 5173
 # 启动命令：开发模式
 # --host: 允许外部访问
 # --port: 指定端口
-CMD ["pnpm", "dev", "--host", "--port", "3000"]
+CMD ["npm", "run", "dev", "--", "--host", "--port", "3000"]

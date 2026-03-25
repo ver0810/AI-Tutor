@@ -2,17 +2,17 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate, usePa
 import Layout from './components/Layout';
 import { useEffect, useState, Suspense, lazy } from 'react';
 import { historyApi } from './api';
-import type { UploadKnowledgeBaseResponse } from './api/knowledgebase';
+import type { UploadCourseMaterialResponse } from './api/courseMaterial';
 
 // Lazy load components
 const UploadPage = lazy(() => import('./pages/UploadPage'));
 const HistoryList = lazy(() => import('./pages/HistoryPage'));
-const ResumeDetailPage = lazy(() => import('./pages/ResumeDetailPage'));
-const Interview = lazy(() => import('./pages/InterviewPage'));
-const InterviewHistoryPage = lazy(() => import('./pages/InterviewHistoryPage'));
-const KnowledgeBaseQueryPage = lazy(() => import('./pages/KnowledgeBaseQueryPage'));
-const KnowledgeBaseUploadPage = lazy(() => import('./pages/KnowledgeBaseUploadPage'));
-const KnowledgeBaseManagePage = lazy(() => import('./pages/KnowledgeBaseManagePage'));
+const StudentProfileDetailPage = lazy(() => import('./pages/StudentProfileDetailPage'));
+const Tutoring = lazy(() => import('./pages/TutoringPage'));
+const TutoringHistoryPage = lazy(() => import('./pages/TutoringHistoryPage'));
+const CourseMaterialQueryPage = lazy(() => import('./pages/CourseMaterialQueryPage'));
+const CourseMaterialUploadPage = lazy(() => import('./pages/CourseMaterialUploadPage'));
+const CourseMaterialManagePage = lazy(() => import('./pages/CourseMaterialManagePage'));
 
 // Loading component
 const Loading = () => (
@@ -25,9 +25,9 @@ const Loading = () => (
 function UploadPageWrapper() {
   const navigate = useNavigate();
 
-  const handleUploadComplete = (resumeId: number) => {
+  const handleUploadComplete = (studentProfileId: number) => {
     // 异步模式：上传成功后跳转到简历库，让用户在列表中查看分析状态
-    navigate('/history', { state: { newResumeId: resumeId } });
+    navigate('/history', { state: { newStudentProfileId: studentProfileId } });
   };
 
   return <UploadPage onUploadComplete={handleUploadComplete} />;
@@ -37,19 +37,19 @@ function UploadPageWrapper() {
 function HistoryListWrapper() {
   const navigate = useNavigate();
 
-  const handleSelectResume = (id: number) => {
+  const handleSelectStudentProfile = (id: number) => {
     navigate(`/history/${id}`);
   };
 
-  return <HistoryList onSelectResume={handleSelectResume} />;
+  return <HistoryList onSelectStudentProfile={handleSelectStudentProfile} />;
 }
 
 // 简历详情包装器
-function ResumeDetailWrapper() {
-  const { resumeId } = useParams<{ resumeId: string }>();
+function StudentProfileDetailWrapper() {
+  const { studentProfileId } = useParams<{ studentProfileId: string }>();
   const navigate = useNavigate();
 
-  if (!resumeId) {
+  if (!studentProfileId) {
     return <Navigate to="/history" replace />;
   }
 
@@ -57,38 +57,38 @@ function ResumeDetailWrapper() {
     navigate('/history');
   };
 
-  const handleStartInterview = (resumeText: string, resumeId: number) => {
-    navigate(`/interview/${resumeId}`, { state: { resumeText } });
+  const handleStartTutoring = (studentProfileText: string, studentProfileId: number) => {
+    navigate(`/tutoring/${studentProfileId}`, { state: { studentProfileText } });
   };
 
   return (
-    <ResumeDetailPage
-      resumeId={parseInt(resumeId, 10)}
+    <StudentProfileDetailPage
+      studentProfileId={parseInt(studentProfileId, 10)}
       onBack={handleBack}
-      onStartInterview={handleStartInterview}
+      onStartTutoring={handleStartTutoring}
     />
   );
 }
 
 // 模拟面试包装器
-function InterviewWrapper() {
-  const { resumeId } = useParams<{ resumeId: string }>();
+function TutoringWrapper() {
+  const { studentProfileId } = useParams<{ studentProfileId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const [resumeText, setResumeText] = useState<string>('');
+  const [studentProfileText, setStudentProfileText] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 优先从location state获取resumeText
-    const stateText = (location.state as { resumeText?: string })?.resumeText;
+    // 优先从location state获取studentProfileText
+    const stateText = (location.state as { studentProfileText?: string })?.studentProfileText;
     if (stateText) {
-      setResumeText(stateText);
+      setStudentProfileText(stateText);
       setLoading(false);
-    } else if (resumeId) {
+    } else if (studentProfileId) {
       // 如果没有，从API获取简历详情
-      historyApi.getResumeDetail(parseInt(resumeId, 10))
-        .then(resume => {
-          setResumeText(resume.resumeText);
+      historyApi.getStudentProfileDetail(parseInt(studentProfileId, 10))
+        .then(studentProfile => {
+          setStudentProfileText(studentProfile.studentProfileText);
           setLoading(false);
         })
         .catch(err => {
@@ -98,20 +98,20 @@ function InterviewWrapper() {
     } else {
       setLoading(false);
     }
-  }, [resumeId, location.state]);
+  }, [studentProfileId, location.state]);
 
-  if (!resumeId) {
+  if (!studentProfileId) {
     return <Navigate to="/history" replace />;
   }
 
   const handleBack = () => {
     // 尝试返回详情页，如果失败则返回历史列表
-    navigate(`/history/${resumeId}`, { replace: false });
+    navigate(`/history/${studentProfileId}`, { replace: false });
   };
 
-  const handleInterviewComplete = () => {
+  const handleTutoringComplete = () => {
     // 面试完成后跳转到面试记录页
-    navigate('/interviews');
+    navigate('/tutorings');
   };
 
   if (loading) {
@@ -126,11 +126,11 @@ function InterviewWrapper() {
   }
 
   return (
-    <Interview
-      resumeText={resumeText}
-      resumeId={parseInt(resumeId, 10)}
+    <Tutoring
+      studentProfileText={studentProfileText}
+      studentProfileId={parseInt(studentProfileId, 10)}
       onBack={handleBack}
-      onInterviewComplete={handleInterviewComplete}
+      onTutoringComplete={handleTutoringComplete}
     />
   );
 }
@@ -151,22 +151,22 @@ function App() {
             <Route path="history" element={<HistoryListWrapper />} />
 
             {/* 简历详情 */}
-            <Route path="history/:resumeId" element={<ResumeDetailWrapper />} />
+            <Route path="history/:studentProfileId" element={<StudentProfileDetailWrapper />} />
 
             {/* 面试记录列表 */}
-            <Route path="interviews" element={<InterviewHistoryWrapper />} />
+            <Route path="tutorings" element={<TutoringHistoryWrapper />} />
 
             {/* 模拟面试 */}
-            <Route path="interview/:resumeId" element={<InterviewWrapper />} />
+            <Route path="tutoring/:studentProfileId" element={<TutoringWrapper />} />
 
-            {/* 知识库管理 */}
-            <Route path="knowledgebase" element={<KnowledgeBaseManagePageWrapper />} />
+            {/* 课程资料管理 */}
+            <Route path="courseMaterial" element={<CourseMaterialManagePageWrapper />} />
 
-            {/* 知识库上传 */}
-            <Route path="knowledgebase/upload" element={<KnowledgeBaseUploadPageWrapper />} />
+            {/* 课程资料上传 */}
+            <Route path="courseMaterial/upload" element={<CourseMaterialUploadPageWrapper />} />
 
-            {/* 问答助手（知识库聊天） */}
-            <Route path="knowledgebase/chat" element={<KnowledgeBaseQueryPageWrapper />} />
+            {/* 问答助手（课程资料聊天） */}
+            <Route path="courseMaterial/chat" element={<CourseMaterialQueryPageWrapper />} />
           </Route>
         </Routes>
       </Suspense>
@@ -175,23 +175,23 @@ function App() {
 }
 
 // 面试记录页面包装器
-function InterviewHistoryWrapper() {
+function TutoringHistoryWrapper() {
   const navigate = useNavigate();
 
   const handleBack = () => {
     navigate('/upload');
   };
 
-  const handleViewInterview = async (sessionId: string, resumeId?: number) => {
-    if (resumeId) {
+  const handleViewTutoring = async (sessionId: string, studentProfileId?: number) => {
+    if (studentProfileId) {
       // 如果有简历ID，跳转到简历详情页的面试详情
-      navigate(`/history/${resumeId}`, {
-        state: { viewInterview: sessionId }
+      navigate(`/history/${studentProfileId}`, {
+        state: { viewTutoring: sessionId }
       });
     } else {
       // 否则尝试从面试详情中获取简历ID
       try {
-        await historyApi.getInterviewDetail(sessionId);
+        await historyApi.getTutoringDetail(sessionId);
         // 面试详情中没有简历ID，需要从其他地方获取
         // 暂时跳转到历史记录列表
         navigate('/history');
@@ -201,59 +201,59 @@ function InterviewHistoryWrapper() {
     }
   };
 
-  return <InterviewHistoryPage onBack={handleBack} onViewInterview={handleViewInterview} />;
+  return <TutoringHistoryPage onBack={handleBack} onViewTutoring={handleViewTutoring} />;
 }
 
-// 知识库管理页面包装器
-function KnowledgeBaseManagePageWrapper() {
+// 课程资料管理页面包装器
+function CourseMaterialManagePageWrapper() {
   const navigate = useNavigate();
 
   const handleUpload = () => {
-    navigate('/knowledgebase/upload');
+    navigate('/courseMaterial/upload');
   };
 
   const handleChat = () => {
-    navigate('/knowledgebase/chat');
+    navigate('/courseMaterial/chat');
   };
 
-  return <KnowledgeBaseManagePage onUpload={handleUpload} onChat={handleChat} />;
+  return <CourseMaterialManagePage onUpload={handleUpload} onChat={handleChat} />;
 }
 
-// 知识库问答页面包装器
-function KnowledgeBaseQueryPageWrapper() {
+// 课程资料问答页面包装器
+function CourseMaterialQueryPageWrapper() {
   const navigate = useNavigate();
   const location = useLocation();
-  const isChatMode = location.pathname === '/knowledgebase/chat';
+  const isChatMode = location.pathname === '/courseMaterial/chat';
 
   const handleBack = () => {
     if (isChatMode) {
-      navigate('/knowledgebase');
+      navigate('/courseMaterial');
     } else {
       navigate('/upload');
     }
   };
 
   const handleUpload = () => {
-    navigate('/knowledgebase/upload');
+    navigate('/courseMaterial/upload');
   };
 
-  return <KnowledgeBaseQueryPage onBack={handleBack} onUpload={handleUpload} />;
+  return <CourseMaterialQueryPage onBack={handleBack} onUpload={handleUpload} />;
 }
 
-// 知识库上传页面包装器
-function KnowledgeBaseUploadPageWrapper() {
+// 课程资料上传页面包装器
+function CourseMaterialUploadPageWrapper() {
   const navigate = useNavigate();
 
-  const handleUploadComplete = (_result: UploadKnowledgeBaseResponse) => {
+  const handleUploadComplete = (_result: UploadCourseMaterialResponse) => {
     // 上传完成后返回管理页面
-    navigate('/knowledgebase');
+    navigate('/courseMaterial');
   };
 
   const handleBack = () => {
-    navigate('/knowledgebase');
+    navigate('/courseMaterial');
   };
 
-  return <KnowledgeBaseUploadPage onUploadComplete={handleUploadComplete} onBack={handleBack} />;
+  return <CourseMaterialUploadPage onUploadComplete={handleUploadComplete} onBack={handleBack} />;
 }
 
 export default App;

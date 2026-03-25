@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { resumeApi } from '../api/resume';
+import { studentProfileApi } from '../api/studentProfile';
 import { getErrorMessage } from '../api/request';
 import FileUploadCard from '../components/FileUploadCard';
 
 interface UploadPageProps {
-  onUploadComplete: (resumeId: number) => void;
+  onUploadComplete: (studentProfileId: number) => void;
 }
 
 export default function UploadPage({ onUploadComplete }: UploadPageProps) {
@@ -16,15 +16,15 @@ export default function UploadPage({ onUploadComplete }: UploadPageProps) {
     setError('');
 
     try {
-      const data = await resumeApi.uploadAndAnalyze(file);
+      const data = await studentProfileApi.uploadAndAnalyze(file);
 
       // 异步模式：只检查上传是否成功（storage 信息）
-      if (!data.storage || !data.storage.resumeId) {
+      if (!data.storage || !data.storage.studentProfileId) {
         throw new Error('上传失败，请重试');
       }
 
       // 上传成功，跳转到课程资料库（分析在后台进行）
-      onUploadComplete(data.storage.resumeId);
+      onUploadComplete(data.storage.studentProfileId);
     } catch (err) {
       setError(getErrorMessage(err));
       setUploading(false);

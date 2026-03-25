@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { historyApi, ResumeListItem, ResumeStats, AnalyzeStatus } from '../api/history';
+import { historyApi, StudentProfileListItem, StudentProfileStats, AnalyzeStatus } from '../api/history';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 import { getScoreColor } from '../utils/score';
 import { formatDate } from '../utils/date';
@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 
 interface HistoryListProps {
-  onSelectResume: (id: number) => void;
+  onSelectStudentProfile: (id: number) => void;
 }
 
 // 格式化文件大小
@@ -113,23 +113,23 @@ function StatCard({
   );
 }
 
-export default function HistoryList({ onSelectResume }: HistoryListProps) {
-  const [resumes, setResumes] = useState<ResumeListItem[]>([]);
-  const [stats, setStats] = useState<ResumeStats | null>(null);
+export default function HistoryList({ onSelectStudentProfile }: HistoryListProps) {
+  const [studentProfiles, setStudentProfiles] = useState<StudentProfileListItem[]>([]);
+  const [stats, setStats] = useState<StudentProfileStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [deleteItem, setDeleteItem] = useState<ResumeListItem | null>(null);
+  const [deleteItem, setDeleteItem] = useState<StudentProfileListItem | null>(null);
   const [reanalyzingId, setReanalyzingId] = useState<number | null>(null);
 
   // 静默加载数据（用于轮询）
   const loadDataSilent = useCallback(async () => {
     try {
-      const [resumeData, statsData] = await Promise.all([
-        historyApi.getResumes(),
+      const [studentProfileData, statsData] = await Promise.all([
+        historyApi.getStudentProfiles(),
         historyApi.getStatistics(),
       ]);
-      setResumes(resumeData);
+      setStudentProfiles(studentProfileData);
       setStats(statsData);
     } catch (err) {
       console.error('加载数据失败', err);
@@ -137,14 +137,14 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
   }, []);
 
   // 加载数据
-  const loadResumes = useCallback(async () => {
+  const loadStudentProfiles = useCallback(async () => {
     setLoading(true);
     try {
-      const [resumeData, statsData] = await Promise.all([
-        historyApi.getResumes(),
+      const [studentProfileData, statsData] = await Promise.all([
+        historyApi.getStudentProfiles(),
         historyApi.getStatistics(),
       ]);
-      setResumes(resumeData);
+      setStudentProfiles(studentProfileData);
       setStats(statsData);
     } catch (err) {
       console.error('加载数据失败', err);
@@ -154,13 +154,13 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
   }, []);
 
   useEffect(() => {
-    loadResumes();
-  }, [loadResumes]);
+    loadStudentProfiles();
+  }, [loadStudentProfiles]);
 
   // 轮询：当有待处理项时，每5秒刷新一次
   // 待处理判断：显式的 PENDING/PROCESSING 状态，或状态未定义且无分数
   useEffect(() => {
-    const hasPendingItems = resumes.some(
+    const hasPendingItems = studentProfiles.some(
       r => r.analyzeStatus === 'PENDING' ||
         r.analyzeStatus === 'PROCESSING' ||
         (r.analyzeStatus === undefined && r.latestScore === undefined)
@@ -173,15 +173,15 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
 
       return () => clearInterval(timer);
     }
-  }, [resumes, loading, loadDataSilent]);
+  }, [studentProfiles, loading, loadDataSilent]);
 
   // 下载简历
-  const handleDownload = (resume: ResumeListItem, e: React.MouseEvent) => {
+  const handleDownload = (studentProfile: StudentProfileListItem, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (resume.storageUrl) {
+    if (studentProfile.storageUrl) {
       const link = document.createElement('a');
-      link.href = resume.storageUrl;
-      link.download = resume.filename;
+      link.href = studentProfile.storageUrl;
+      link.download = studentProfile.filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -202,9 +202,9 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
     }
   };
 
-  const handleDeleteClick = (resume: ResumeListItem, e: React.MouseEvent) => {
+  const handleDeleteClick = (studentProfile: StudentProfileListItem, e: React.MouseEvent) => {
     e.stopPropagation();
-    setDeleteItem(resume);
+    setDeleteItem(studentProfile);
   };
 
   const handleDeleteConfirm = async () => {
@@ -212,8 +212,8 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
 
     setDeletingId(deleteItem.id);
     try {
-      await historyApi.deleteResume(deleteItem.id);
-      await loadResumes();
+      await historyApi.deleteStudentProfile(deleteItem.id);
+      await loadStudentProfiles();
       setDeleteItem(null);
     } catch (err) {
       alert(err instanceof Error ? err.message : '删除失败，请稍后重试');
@@ -222,8 +222,8 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
     }
   };
 
-  const filteredResumes = resumes.filter(resume =>
-    resume.filename.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredStudentProfiles = studentProfiles.filter(studentProfile =>
+    studentProfile.filename.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -281,7 +281,7 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
           <StatCard
             icon={MessageSquare}
             label="面试总数"
-            value={stats.totalInterviewCount}
+            value={stats.totalTutoringCount}
             color="bg-indigo-500"
           />
           <StatCard
@@ -301,7 +301,7 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
       )}
 
       {/* 空状态 */}
-      {!loading && filteredResumes.length === 0 && (
+      {!loading && filteredStudentProfiles.length === 0 && (
         <motion.div
           className="text-center py-20 bg-white rounded-2xl shadow-sm border border-slate-100"
           initial={{ opacity: 0, scale: 0.95 }}
@@ -314,7 +314,7 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
       )}
 
       {/* 表格 */}
-      {!loading && filteredResumes.length > 0 && (
+      {!loading && filteredStudentProfiles.length > 0 && (
         <motion.div
           className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden"
           initial={{ opacity: 0, y: 20 }}
@@ -335,70 +335,70 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
             </thead>
             <tbody>
               <AnimatePresence>
-                {filteredResumes.map((resume, index) => (
+                {filteredStudentProfiles.map((studentProfile, index) => (
                   <motion.tr
-                    key={resume.id}
+                    key={studentProfile.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    onClick={() => onSelectResume(resume.id)}
+                    onClick={() => onSelectStudentProfile(studentProfile.id)}
                     className="border-b border-slate-50 hover:bg-slate-50 cursor-pointer transition-colors group"
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <FileText className="w-5 h-5 text-slate-400" />
                         <div>
-                          <p className="font-medium text-slate-800">{resume.filename}</p>
+                          <p className="font-medium text-slate-800">{studentProfile.filename}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
-                      {formatFileSize(resume.fileSize)}
+                      {formatFileSize(studentProfile.fileSize)}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <StatusIcon status={resume.analyzeStatus} hasScore={resume.latestScore !== undefined} />
+                        <StatusIcon status={studentProfile.analyzeStatus} hasScore={studentProfile.latestScore !== undefined} />
                         <span className="text-sm text-slate-600">
-                          {getStatusText(resume.analyzeStatus, resume.latestScore !== undefined)}
+                          {getStatusText(studentProfile.analyzeStatus, studentProfile.latestScore !== undefined)}
                         </span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      {resume.latestScore !== undefined ? (
+                      {studentProfile.latestScore !== undefined ? (
                         <div className="flex items-center gap-3">
                           <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
                             <motion.div
-                              className={`h-full ${getScoreColor(resume.latestScore).split(' ')[0]} rounded-full`}
+                              className={`h-full ${getScoreColor(studentProfile.latestScore).split(' ')[0]} rounded-full`}
                               initial={{ width: 0 }}
-                              animate={{ width: `${resume.latestScore}%` }}
+                              animate={{ width: `${studentProfile.latestScore}%` }}
                               transition={{ duration: 0.8, delay: index * 0.05 }}
                             />
                           </div>
-                          <span className="font-bold text-slate-800">{resume.latestScore}</span>
+                          <span className="font-bold text-slate-800">{studentProfile.latestScore}</span>
                         </div>
                       ) : (
                         <span className="text-slate-400">-</span>
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      {resume.interviewCount > 0 ? (
+                      {studentProfile.tutoringCount > 0 ? (
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-sm font-medium">
                           <CheckCircle2 className="w-4 h-4" />
-                          {resume.interviewCount} 次
+                          {studentProfile.tutoringCount} 次
                         </span>
                       ) : (
                         <span className="inline-flex px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-sm">待面试</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-500">
-                      {formatDate(resume.uploadedAt)}
+                      {formatDate(studentProfile.uploadedAt)}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1">
                         {/* 下载按钮 */}
-                        {resume.storageUrl && (
+                        {studentProfile.storageUrl && (
                           <button
-                            onClick={(e) => handleDownload(resume, e)}
+                            onClick={(e) => handleDownload(studentProfile, e)}
                             className="p-2 text-slate-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors"
                             title="下载"
                           >
@@ -406,20 +406,20 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
                           </button>
                         )}
                         {/* 重新分析按钮（仅 FAILED 状态显示） */}
-                        {resume.analyzeStatus === 'FAILED' && (
+                        {studentProfile.analyzeStatus === 'FAILED' && (
                           <button
-                            onClick={(e) => handleReanalyze(resume.id, e)}
-                            disabled={reanalyzingId === resume.id}
+                            onClick={(e) => handleReanalyze(studentProfile.id, e)}
+                            disabled={reanalyzingId === studentProfile.id}
                             className="p-2 text-slate-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors disabled:opacity-50"
                             title="重新分析"
                           >
-                            <RefreshCw className={`w-4 h-4 ${reanalyzingId === resume.id ? 'animate-spin' : ''}`} />
+                            <RefreshCw className={`w-4 h-4 ${reanalyzingId === studentProfile.id ? 'animate-spin' : ''}`} />
                           </button>
                         )}
                         {/* 删除按钮 */}
                         <button
-                          onClick={(e) => handleDeleteClick(resume, e)}
-                          disabled={deletingId === resume.id}
+                          onClick={(e) => handleDeleteClick(studentProfile, e)}
+                          disabled={deletingId === studentProfile.id}
                           className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
                           title="删除"
                         >

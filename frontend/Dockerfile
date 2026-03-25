@@ -8,17 +8,16 @@ WORKDIR /app
 # 1. 优先复制依赖定义文件
 # 技巧：利用 Docker 缓存层机制。只要 package.json 不变，这一层就会被缓存，
 # 避免每次构建都重新下载 npm 包，显著加快构建速度。
-COPY package.json pnpm-lock.yaml ./
+COPY package.json package-lock.json ./
 
 # 2. 安装依赖
-# npm install -g pnpm: 全局安装 pnpm 包管理器
-# --frozen-lockfile: 严格按照 pnpm-lock.yaml 安装依赖，确保版本一致性（CI环境标准做法）
-RUN npm install -g pnpm && pnpm install --frozen-lockfile
+# npm ci: 严格按照 package-lock.json 安装依赖，确保版本一致性（CI环境标准做法）
+RUN npm ci
 
 # 3. 复制源代码并构建
 COPY . .
 # 执行构建命令 (vite build)，生成的静态文件会存放在 /app/dist 目录
-RUN pnpm build
+RUN npm run build
 
 # ==============================================================================
 # 第二阶段：生产环境 (Production Stage)

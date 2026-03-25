@@ -41,10 +41,10 @@ export default function Layout() {
     },
     {
       id: 'knowledge',
-      title: '知识库',
+      title: '课程资料',
       items: [
-        { id: 'kb-manage', path: '/courseMaterial', label: '知识库管理', icon: Database, description: '管理知识文档' },
-        { id: 'chat', path: '/courseMaterial/chat', label: '问答助手', icon: MessageSquare, description: '基于知识库问答' },
+        { id: 'kb-manage', path: '/courseMaterial', label: '课程资料管理', icon: Database, description: '管理知识文档' },
+        { id: 'chat', path: '/courseMaterial/chat', label: '问答助手', icon: MessageSquare, description: '基于课程资料问答' },
       ],
     },
   ];
