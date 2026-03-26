@@ -1,7 +1,6 @@
 package edu.aitutor.modules.tutoring.service;
 
 import edu.aitutor.common.ai.StructuredOutputInvoker;
-import edu.aitutor.common.exception.BusinessException;
 import edu.aitutor.common.exception.ErrorCode;
 import edu.aitutor.modules.tutoring.model.TutoringQuestionDTO;
 import edu.aitutor.modules.tutoring.model.TutoringQuestionDTO.QuestionType;
@@ -23,6 +22,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * 测验问题生成服务 (通用化重构)
+ */
 @Service
 public class TutoringQuestionService {
 
@@ -38,17 +40,17 @@ public class TutoringQuestionService {
     private final StructuredOutputInvoker structuredOutputInvoker;
     private final int followUpCount;
 
-    private static final double PROJECT_RATIO = 0.20;
-    private static final double MYSQL_RATIO = 0.20;
-    private static final double REDIS_RATIO = 0.20;
-    private static final double JAVA_BASIC_RATIO = 0.10;
-    private static final double JAVA_COLLECTION_RATIO = 0.10;
-    private static final double JAVA_CONCURRENT_RATIO = 0.10;
+    // 通用题型分布比例
+    private static final double CONCEPT_RATIO = 0.30;   // 基础概念
+    private static final double PRACTICE_RATIO = 0.30;  // 实践应用
+    private static final double ANALYSIS_RATIO = 0.20;  // 深度分析
+    // 剩余为 SCENARIO 场景模拟
+    
     private static final int MAX_FOLLOW_UP_COUNT = 2;
 
     private record QuestionListDTO(List<QuestionDTO> questions) {}
     private record QuestionDTO(String question, String type, String category, List<String> followUps) {}
-    private record QuestionDistribution(int project, int mysql, int redis, int javaBasic, int javaCollection, int javaConcurrent, int spring) {}
+    private record QuestionDistribution(int concept, int practice, int analysis, int scenario) {}
 
     public TutoringQuestionService(
         ChatClient.Builder chatClientBuilder,
@@ -108,18 +110,13 @@ public class TutoringQuestionService {
                                                      List<String> historicalQuestions,
                                                      QuestionDistribution distribution) {
         Map<String, Object> variables = new HashMap<>();
-        variables.put("question", "请基于课程资料生成测验题");
-        variables.put("context", studentProfileText);
-        variables.put("questionCount", questionCount);
-        variables.put("projectCount", distribution.project());
-        variables.put("mysqlCount", distribution.mysql());
-        variables.put("redisCount", distribution.redis());
-        variables.put("javaBasicCount", distribution.javaBasic());
-        variables.put("javaCollectionCount", distribution.javaCollection());
-        variables.put("javaConcurrentCount", distribution.javaConcurrent());
-        variables.put("springCount", distribution.spring());
-        variables.put("followUpCount", followUpCount);
         variables.put("studentProfileText", studentProfileText);
+        variables.put("questionCount", questionCount);
+        variables.put("conceptCount", distribution.concept());
+        variables.put("practiceCount", distribution.practice());
+        variables.put("analysisCount", distribution.analysis());
+        variables.put("scenarioCount", distribution.scenario());
+        variables.put("followUpCount", followUpCount);
         variables.put("historicalQuestions",
             historicalQuestions == null || historicalQuestions.isEmpty()
                 ? "暂无历史提问"
@@ -128,14 +125,11 @@ public class TutoringQuestionService {
     }
 
     private QuestionDistribution calculateDistribution(int total) {
-        int project = Math.max(1, (int) Math.round(total * PROJECT_RATIO));
-        int mysql = Math.max(1, (int) Math.round(total * MYSQL_RATIO));
-        int redis = Math.max(1, (int) Math.round(total * REDIS_RATIO));
-        int javaBasic = Math.max(1, (int) Math.round(total * JAVA_BASIC_RATIO));
-        int javaCollection = (int) Math.round(total * JAVA_COLLECTION_RATIO);
-        int javaConcurrent = (int) Math.round(total * JAVA_CONCURRENT_RATIO);
-        int spring = Math.max(0, total - project - mysql - redis - javaBasic - javaCollection - javaConcurrent);
-        return new QuestionDistribution(project, mysql, redis, javaBasic, javaCollection, javaConcurrent, spring);
+        int concept = Math.max(1, (int) Math.round(total * CONCEPT_RATIO));
+        int practice = Math.max(1, (int) Math.round(total * PRACTICE_RATIO));
+        int analysis = Math.max(1, (int) Math.round(total * ANALYSIS_RATIO));
+        int scenario = Math.max(0, total - concept - practice - analysis);
+        return new QuestionDistribution(concept, practice, analysis, scenario);
     }
 
     private List<TutoringQuestionDTO> convertToQuestions(QuestionListDTO dto) {
@@ -149,7 +143,9 @@ public class TutoringQuestionService {
                 continue;
             }
             QuestionType type = parseQuestionType(q.type());
-            questions.add(TutoringQuestionDTO.create(index++, q.question().trim(), type, normalizeCategory(q.category(), type)));
+            String category = (q.category() != null && !q.category().isBlank()) ? q.category().trim() : "综合资料";
+            
+            questions.add(TutoringQuestionDTO.create(index++, q.question().trim(), type, category));
 
             List<String> followUps = sanitizeFollowUps(q.followUps());
             for (int i = 0; i < followUps.size(); i++) {
@@ -157,7 +153,7 @@ public class TutoringQuestionService {
                     index++,
                     followUps.get(i),
                     type,
-                    buildFollowUpCategory(normalizeCategory(q.category(), type), i + 1)
+                    buildFollowUpCategory(category, i + 1)
                 ));
             }
         }
@@ -166,28 +162,13 @@ public class TutoringQuestionService {
 
     private QuestionType parseQuestionType(String typeStr) {
         if (typeStr == null || typeStr.isBlank()) {
-            return QuestionType.JAVA_BASIC;
+            return QuestionType.CONCEPT;
         }
         try {
             return QuestionType.valueOf(typeStr.trim().toUpperCase());
         } catch (Exception e) {
-            return QuestionType.JAVA_BASIC;
+            return QuestionType.CONCEPT;
         }
-    }
-
-    private String normalizeCategory(String category, QuestionType type) {
-        if (category != null && !category.isBlank()) {
-            return category.trim();
-        }
-        return switch (type) {
-            case PROJECT -> "项目经历";
-            case MYSQL -> "MySQL";
-            case REDIS -> "Redis";
-            case JAVA_COLLECTION -> "Java集合";
-            case JAVA_CONCURRENT -> "Java并发";
-            case SPRING, SPRING_BOOT -> "Spring";
-            default -> "Java基础";
-        };
     }
 
     private List<String> sanitizeFollowUps(List<String> followUps) {
@@ -239,16 +220,14 @@ public class TutoringQuestionService {
     private List<TutoringQuestionDTO> generateDefaultQuestions(int count) {
         List<TutoringQuestionDTO> questions = new ArrayList<>();
         String[][] defaultQuestions = {
-            {"请总结该课程资料中最关键的三个知识点，并说明它们的联系。", "JAVA_BASIC", "核心概念"},
-            {"结合资料内容，解释一个你认为最容易混淆的概念，并举例说明。", "JAVA_BASIC", "概念辨析"},
-            {"如果要把这份资料教给新同学，你会如何组织讲解顺序？", "PROJECT", "学习路径"},
-            {"请从资料中挑选一个技术点，说明其在真实项目中的应用场景。", "PROJECT", "实践应用"},
-            {"资料中涉及的数据存储设计里，哪些部分可以用 MySQL 优化？", "MYSQL", "MySQL"},
-            {"如果该资料主题用于高并发场景，Redis 可以承担什么角色？", "REDIS", "Redis"},
-            {"请比较资料中两个相关技术方案的优缺点，并给出选择依据。", "JAVA_COLLECTION", "方案对比"},
-            {"针对资料中一个核心流程，给出异常排查步骤。", "JAVA_CONCURRENT", "问题定位"},
-            {"请给出一条可执行的复习计划，说明每天的学习目标。", "SPRING", "复习计划"},
-            {"如果要设计一套测验来检验资料掌握度，你会出哪些题型？", "SPRING_BOOT", "学习评估"}
+            {"请总结该课程资料中最关键的三个知识点，并说明它们的联系。", "CONCEPT", "核心概念"},
+            {"结合资料内容，解释一个你认为最容易混淆的概念，并举例说明。", "CONCEPT", "概念辨析"},
+            {"如果要把这份资料教给新同学，你会如何组织讲解顺序？", "PRACTICE", "教学组织"},
+            {"请从资料中挑选一个核心观点，说明其在真实工作或学习中的应用。", "PRACTICE", "实践应用"},
+            {"针对资料中的核心理论，分析其存在的局限性或适用范围。", "ANALYSIS", "深度分析"},
+            {"如果有同学对资料中的某个结论提出质疑，你会如何利用资料内容进行回应？", "SCENARIO", "场景模拟"},
+            {"请比较资料中提到的不同方案或流派，并给出你的评价依据。", "ANALYSIS", "方案对比"},
+            {"如果基于这份资料进行一次期末考试，你认为哪个部分最适合出大题？", "SCENARIO", "学习评估"}
         };
 
         int index = 0;
@@ -271,8 +250,8 @@ public class TutoringQuestionService {
 
     private String buildDefaultFollowUp(String mainQuestion, int order) {
         if (order == 1) {
-            return "围绕“" + mainQuestion + "”，请结合课程资料给出一个更具体的例子。";
+            return "围绕“" + mainQuestion + "”，请结合课程资料给出一个更具体的说明。";
         }
-        return "围绕“" + mainQuestion + "”，如果要在考试中拿高分，你会如何组织回答结构？";
+        return "围绕“" + mainQuestion + "”，如何能证明你已经深度掌握了这个知识点？";
     }
 }

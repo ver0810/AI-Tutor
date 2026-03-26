@@ -1,26 +1,23 @@
 package edu.aitutor.modules.tutoring.model;
 
 /**
- * 面试问题DTO
+ * 测验问题DTO (通用化设计)
  */
 public record TutoringQuestionDTO(
     int questionIndex,
     String question,
     QuestionType type,
-    String category,      // 问题类别：项目经历、Java基础、集合、并发、MySQL、Redis、Spring、SpringBoot
+    String category,      // 题目类别：基于资料内容自动生成，不再写死
     String userAnswer,    // 用户回答
     Integer score,        // 单题得分 (0-100)
     String feedback       // 单题反馈
 ) {
     public enum QuestionType {
-        PROJECT,          // 项目经历
-        JAVA_BASIC,       // Java基础
-        JAVA_COLLECTION,  // Java集合
-        JAVA_CONCURRENT,  // Java并发
-        MYSQL,            // MySQL
-        REDIS,            // Redis
-        SPRING,           // Spring
-        SPRING_BOOT       // Spring Boot
+        CONCEPT,          // 基础概念
+        PRACTICE,         // 实践应用
+        ANALYSIS,         // 深度分析
+        SCENARIO,         // 场景模拟
+        OTHER             // 其他
     }
     
     /**
